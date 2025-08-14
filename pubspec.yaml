@@ -32,6 +32,8 @@ dependencies:
   # Audio & Media
   audioplayers: ^5.2.1
   just_audio: ^0.9.36
+  record: ^5.0.4
+  speech_to_text: ^6.3.0
   
   # UI & UX
   flutter_staggered_animations: ^1.1.1

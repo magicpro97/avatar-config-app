@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../providers/app_state_provider.dart';
-import '../../widgets/common/copyable_error_widget.dart';
 import 'api_settings_screen.dart';
 
 /// Functional settings screen with interactive buttons
@@ -262,35 +261,4 @@ class _BasicSettingsScreenState extends State<BasicSettingsScreen> {
     );
   }
 
-  // Error handling methods for API key functionality
-  void _showApiKeyValidationError(String errorMessage) {
-    CopyableErrorDialog.show(
-      context,
-      errorMessage: errorMessage,
-      title: 'Lỗi xác thực API Key',
-      icon: Icons.vpn_key_off,
-    );
-  }
-
-  void _showApiKeySaveError(String error) {
-    final detailedError = '''
-Lỗi khi lưu API Key:
-
-Chi tiết lỗi:
-$error
-
-Các bước khắc phục:
-1. Kiểm tra kết nối internet
-2. Đảm bảo API key đúng định dạng
-3. Thử lại sau vài phút
-4. Liên hệ hỗ trợ nếu lỗi tiếp diễn
-    ''';
-    
-    CopyableErrorDialog.show(
-      context,
-      errorMessage: detailedError,
-      title: 'Lỗi lưu API Key',
-      icon: Icons.save_alt,
-    );
-  }
 }

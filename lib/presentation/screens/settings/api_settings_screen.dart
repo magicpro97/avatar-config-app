@@ -392,7 +392,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: hasKey ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                    color: hasKey ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: hasKey ? Colors.green : Colors.orange,

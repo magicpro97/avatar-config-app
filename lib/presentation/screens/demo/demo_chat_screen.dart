@@ -12,6 +12,7 @@ import 'widgets/chat_message_widget.dart';
 import '../../../data/services/personality_service.dart';
 import '../../../data/services/api_config_service.dart';
 import '../../../core/network/api_client.dart';
+import '../../../presentation/widgets/audio/voice_chat_widget.dart';
 
 /// Demo chat screen that showcases avatar and voice configuration functionality
 class DemoChatScreen extends StatefulWidget {
@@ -26,18 +27,23 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _conversationHistory = [];
   bool _isGeneratingVoice = false;
+  bool _showVoiceChat = false;
 
 
   Future<void> _loadInitialData() async {
+    if (!mounted) return;
+    
     // Load avatar configurations
     await context.read<AvatarProvider>().loadConfigurations();
     
+    if (!mounted) return;
     // Load voice configurations
     await context.read<VoiceProvider>().loadAvailableVoices();
     
     // Initialize personality service with API key
     await _initializePersonalityService();
     
+    if (!mounted) return;
     // Add welcome message
     _addWelcomeMessage();
   }
@@ -135,6 +141,34 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     _simulateAvatarResponse(message);
   }
 
+  void _handleVoiceMessageSent(String message) {
+    // Add user message from voice
+    _addToConversation(
+      message: message,
+      isUserMessage: true,
+    );
+
+    // Simulate avatar response after a delay
+    _simulateAvatarResponse(message);
+  }
+
+  void _handleTextMessageSent(String message) {
+    // Add user message from text
+    _addToConversation(
+      message: message,
+      isUserMessage: true,
+    );
+
+    // Simulate avatar response after a delay
+    _simulateAvatarResponse(message);
+  }
+
+  void _toggleVoiceChat() {
+    setState(() {
+      _showVoiceChat = !_showVoiceChat;
+    });
+  }
+
   late final PersonalityService _personalityService;
 
   @override
@@ -182,7 +216,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
       final response = await _personalityService.generateResponse(
         userMessage: userMessage,
         personalityType: activeConfig.personalityType,
-        voiceId: activeConfig.voiceConfiguration?.voiceId,
+        voiceId: activeConfig.voiceConfiguration.voiceId,
       );
       
       _addToConversation(
@@ -322,26 +356,32 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
         
         if (audioId != null) {
           // Update the conversation history with the audio ID
-          setState(() {
-            final index = _conversationHistory.indexWhere((msg) => msg['id'] == messageId);
-            if (index != -1) {
-              _conversationHistory[index]['audioId'] = audioId;
-            }
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã tổng hợp và phát giọng nói thành công!')),
-          );
+          if (mounted) {
+            setState(() {
+              final index = _conversationHistory.indexWhere((msg) => msg['id'] == messageId);
+              if (index != -1) {
+                _conversationHistory[index]['audioId'] = audioId;
+              }
+            });
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đã tổng hợp và phát giọng nói thành công!')),
+            );
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không thể phát giọng nói. Vui lòng kiểm tra cài đặt.')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không thể phát giọng nói. Vui lòng kiểm tra cài đặt.')),
+            );
+          }
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi tổng hợp giọng nói: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi tổng hợp giọng nói: $e')),
+        );
+      }
     } finally {
       setState(() {
         _isGeneratingVoice = false;
@@ -468,101 +508,151 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
       ),
       child: Column(
         children: [
-          // Voice synthesis button
+          // Voice chat toggle button
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập tin nhắn của bạn...',
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    enabled: !_isGeneratingVoice,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
+                child: Text(
+                  _showVoiceChat ? 'Chat Voice Đã Bật' : 'Chat Voice Đã Tắt',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
                   ),
-                  onSubmitted: (_) => _handleSendMessage(),
-                  textInputAction: TextInputAction.send,
+                  textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(width: 12),
-              
-              // Voice synthesis button
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  icon: _isGeneratingVoice
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.record_voice_over),
-                  onPressed: _isGeneratingVoice ? null : _handleSynthesizeSpeech,
-                  tooltip: 'Tổng hợp giọng nói',
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-              
               const SizedBox(width: 8),
-              
-              // Send button
               Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: _showVoiceChat
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _handleSendMessage,
-                  tooltip: 'Gửi tin nhắn',
-                  color: Theme.of(context).colorScheme.onSecondary,
+                  icon: Icon(
+                    _showVoiceChat ? Icons.chat : Icons.mic,
+                    color: _showVoiceChat
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: _toggleVoiceChat,
+                  tooltip: _showVoiceChat ? 'Tắt Chat Voice' : 'Bật Chat Voice',
                 ),
               ),
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           
-          // Instructions
-          Text(
-            'Nhập tin nhắn và gửi để xem avatar phản hồi. Sử dụng nút tổng hợp giọng nói để phát âm thanh.',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              fontSize: 12,
+          // Voice chat widget (when enabled)
+          if (_showVoiceChat)
+            VoiceChatWidget(
+              onVoiceMessageSent: _handleVoiceMessageSent,
+              onTextMessageSent: _handleTextMessageSent,
+              height: 120,
             ),
-            textAlign: TextAlign.center,
-          ),
+          
+          // Traditional input area (when voice chat is disabled)
+          if (!_showVoiceChat)
+            Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tin nhắn của bạn...',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          enabled: !_isGeneratingVoice,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                        ),
+                        onSubmitted: (_) => _handleSendMessage(),
+                        textInputAction: TextInputAction.send,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    
+                    // Voice synthesis button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: _isGeneratingVoice
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.record_voice_over),
+                        onPressed: _isGeneratingVoice ? null : _handleSynthesizeSpeech,
+                        tooltip: 'Tổng hợp giọng nói',
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // Send button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed: _handleSendMessage,
+                        tooltip: 'Gửi tin nhắn',
+                        color: Theme.of(context).colorScheme.onSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Instructions
+                Text(
+                  'Nhập tin nhắn và gửi để xem avatar phản hồi. Sử dụng nút tổng hợp giọng nói để phát âm thanh.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
         ],
       ),
     );
