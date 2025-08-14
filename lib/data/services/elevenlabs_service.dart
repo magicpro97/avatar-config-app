@@ -155,7 +155,7 @@ class ElevenLabsService {
         // DEBUG: Web platform detected, using special CORS handling...
         
         // Use a simplified approach for web - try with minimal headers
-        final originalUrl = '${ApiConstants.baseUrl}/v1/text-to-speech/$voiceId';
+        final originalUrl = '${ApiConstants.elevenLabsBaseUrl}/v1/text-to-speech/$voiceId';
         final apiKey = await getApiKey();
         if (apiKey == null) {
           throw const ApiKeyException(message: 'API key not found');
@@ -251,7 +251,7 @@ class ElevenLabsService {
     // Rate limiting
     await _enforceRateLimit();
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final uri = Uri.parse('${ApiConstants.elevenLabsBaseUrl}$endpoint');
     
     // For web, we need to handle CORS differently
     if (kIsWeb) {

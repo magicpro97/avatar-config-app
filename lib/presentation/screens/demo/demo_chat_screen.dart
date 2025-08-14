@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
 import '../../providers/avatar_provider.dart';
 import '../../providers/voice_provider.dart';
 import '../../../domain/entities/avatar_configuration.dart';
@@ -8,6 +9,9 @@ import '../../../domain/entities/voice.dart';
 import '../../../domain/entities/personality.dart';
 import '../../../presentation/widgets/avatar/avatar_display_widget.dart';
 import 'widgets/chat_message_widget.dart';
+import '../../../data/services/personality_service.dart';
+import '../../../data/services/api_config_service.dart';
+import '../../../core/network/api_client.dart';
 
 /// Demo chat screen that showcases avatar and voice configuration functionality
 class DemoChatScreen extends StatefulWidget {
@@ -23,18 +27,6 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   final List<Map<String, dynamic>> _conversationHistory = [];
   bool _isGeneratingVoice = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadInitialData();
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   Future<void> _loadInitialData() async {
     // Load avatar configurations
@@ -43,8 +35,39 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     // Load voice configurations
     await context.read<VoiceProvider>().loadAvailableVoices();
     
+    // Initialize personality service with API key
+    await _initializePersonalityService();
+    
     // Add welcome message
     _addWelcomeMessage();
+  }
+
+  Future<void> _initializePersonalityService() async {
+    try {
+      final openAiApiKey = await ApiConfigService.getOpenAiApiKey() ?? '';
+      
+      // Initialize personality service
+      final apiClient = ApiClient(
+        httpClient: http.Client(),
+        apiKey: '', // For ElevenLabs compatibility
+      );
+      
+      _personalityService = PersonalityService.fromApiClient(
+        apiClient: apiClient,
+        openAiApiKey: openAiApiKey,
+      );
+    } catch (e) {
+      // If initialization fails, create service with empty key (will use fallbacks)
+      final apiClient = ApiClient(
+        httpClient: http.Client(),
+        apiKey: '',
+      );
+      
+      _personalityService = PersonalityService.fromApiClient(
+        apiClient: apiClient,
+        openAiApiKey: '',
+      );
+    }
   }
 
   void _addWelcomeMessage() {
@@ -112,6 +135,32 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     _simulateAvatarResponse(message);
   }
 
+  late final PersonalityService _personalityService;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize with temporary service (will be properly initialized in _loadInitialData)
+    final tempApiClient = ApiClient(
+      httpClient: http.Client(),
+      apiKey: '',
+    );
+    _personalityService = PersonalityService.fromApiClient(
+      apiClient: tempApiClient,
+      openAiApiKey: '',
+    );
+    
+    _loadInitialData();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _simulateAvatarResponse(String userMessage) async {
     final avatarProvider = context.read<AvatarProvider>();
     final activeConfig = avatarProvider.activeConfiguration;
@@ -128,17 +177,33 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     // Simulate thinking delay
     await Future.delayed(const Duration(milliseconds: 1000));
 
-    // Generate response based on personality type
-    final response = _generatePersonalityResponse(userMessage, activeConfig.personalityType);
-    
-    _addToConversation(
-      message: response,
-      isUserMessage: false,
-      avatarConfig: activeConfig,
-      voiceConfig: activeConfig.voiceConfiguration,
-    );
+    try {
+      // Generate response using API with fallback to hard-coded responses
+      final response = await _personalityService.generateResponse(
+        userMessage: userMessage,
+        personalityType: activeConfig.personalityType,
+        voiceId: activeConfig.voiceConfiguration?.voiceId,
+      );
+      
+      _addToConversation(
+        message: response,
+        isUserMessage: false,
+        avatarConfig: activeConfig,
+        voiceConfig: activeConfig.voiceConfiguration,
+      );
+    } catch (e) {
+      // Fallback to hard-coded response if API call fails
+      final fallbackResponse = _generatePersonalityResponse(userMessage, activeConfig.personalityType);
+      _addToConversation(
+        message: fallbackResponse,
+        isUserMessage: false,
+        avatarConfig: activeConfig,
+        voiceConfig: activeConfig.voiceConfiguration,
+      );
+    }
   }
 
+  /// Fallback method for generating personality responses when API is unavailable
   String _generatePersonalityResponse(String userMessage, PersonalityType personalityType) {
     final lowerMessage = userMessage.toLowerCase();
     
@@ -215,8 +280,6 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
           return 'Mọi thứ đều có ý nghĩa... nếu bạn biết cách nhìn... bí mật nằm trong tầm tay bạn... ✨';
         }
         
-      default:
-        return 'Xin chào! Tôi là avatar của bạn. Chúng ta có thể trò chuyện về bất cứ điều gì bạn muốn.';
     }
   }
 
@@ -289,7 +352,6 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   @override
   Widget build(BuildContext context) {
     final avatarProvider = context.watch<AvatarProvider>();
-    final voiceProvider = context.watch<VoiceProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -420,7 +482,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
                       borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                       ),
                     ),
                     enabled: !_isGeneratingVoice,
@@ -442,7 +504,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -474,7 +536,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),

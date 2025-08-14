@@ -8,10 +8,14 @@ import '../errors/exceptions.dart';
 class ApiClient {
   final http.Client httpClient;
   final String? apiKey;
+  final String baseUrl;
+  final String authHeader;
 
   ApiClient({
     required this.httpClient,
     this.apiKey,
+    this.baseUrl = ApiConstants.elevenLabsBaseUrl,
+    this.authHeader = ApiConstants.elevenLabsAuthHeader,
   });
 
   Future<Map<String, dynamic>> get(
@@ -19,7 +23,7 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('$baseUrl$endpoint');
       final response = await httpClient.get(
         uri,
         headers: _buildHeaders(headers),
@@ -43,7 +47,7 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('$baseUrl$endpoint');
       final response = await httpClient.post(
         uri,
         headers: _buildHeaders(headers),
@@ -69,7 +73,11 @@ class ApiClient {
     };
 
     if (apiKey != null) {
-      headers[ApiConstants.authorizationHeader] = apiKey!;
+      if (authHeader == ApiConstants.openAiAuthHeader) {
+        headers[authHeader] = 'Bearer $apiKey';
+      } else {
+        headers[authHeader] = apiKey!;
+      }
     }
 
     if (additionalHeaders != null) {
