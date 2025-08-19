@@ -258,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            heroTag: "add_config_fab", // Unique hero tag
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -270,6 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           FloatingActionButton(
+            heroTag: "demo_chat_fab", // Unique hero tag
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(

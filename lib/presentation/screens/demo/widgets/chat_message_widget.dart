@@ -31,110 +31,124 @@ class ChatMessageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar or user icon
-          if (!isUserMessage) ...[
-            _buildAvatarPlaceholder(context),
-            const SizedBox(width: 12),
-          ] else
-            const SizedBox(width: 48), // Space for avatar alignment
-          
-          // Message content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Message bubble
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isUserMessage
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Message text
-                      Text(
-                        message,
-                        style: TextStyle(
-                          color: isUserMessage
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 16,
-                        ),
-                      ),
-                      
-                      // Voice player widget (for avatar messages)
-                      if (!isUserMessage && audioId != null) ...[
-                        const SizedBox(height: 8),
-                        VoicePlayerWidget(
-                          audioId: audioId!,
-                          audioText: message,
-                          height: 60,
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar or user icon
+            if (!isUserMessage) ...[
+              _buildAvatarPlaceholder(context),
+              const SizedBox(width: 12),
+            ] else
+              const SizedBox(width: 48), // Space for avatar alignment
+            // Message content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Message bubble
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isUserMessage
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ],
-                      
-                      // Voice configuration info (for avatar messages without audio)
-                      if (!isUserMessage && voiceConfig != null && audioId == null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.record_voice_over,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${voiceConfig!.name} • ${voiceConfig!.gender.name}',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                fontSize: 12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Message text
+                        SelectableText(
+                          message,
+                          style: TextStyle(
+                            color: isUserMessage
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                          ),
+                        ),
+
+                        // Voice player widget (for avatar messages)
+                        if (!isUserMessage && audioId != null) ...[
+                          const SizedBox(height: 8),
+                          VoicePlayerWidget(
+                            audioId: audioId!,
+                            audioText: message,
+                            height: 60,
+                          ),
+                        ],
+
+                        // Voice configuration info (for avatar messages without audio)
+                        if (!isUserMessage &&
+                            voiceConfig != null &&
+                            audioId == null) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.record_voice_over,
+                                size: 14,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${voiceConfig!.name} • ${voiceConfig!.gender.name}',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-                
-                // Timestamp
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4),
-                  child: Text(
-                    _formatTimestamp(timestamp),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                      fontSize: 12,
                     ),
                   ),
-                ),
-              ],
+
+                  // Timestamp
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4),
+                    child: Text(
+                      _formatTimestamp(timestamp),
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          
-          // User avatar space (for user messages)
-          if (isUserMessage) ...[
-            const SizedBox(width: 12),
-            _buildUserAvatarPlaceholder(context),
-          ] else
-            const SizedBox(width: 48), // Space for user avatar alignment
-        ],
+
+            // User avatar space (for user messages)
+            if (isUserMessage) ...[
+              const SizedBox(width: 12),
+              _buildUserAvatarPlaceholder(context),
+            ] else
+              const SizedBox(width: 48), // Space for user avatar alignment
+          ],
+        ),
       ),
     );
   }
@@ -147,7 +161,7 @@ class ChatMessageWidget extends StatelessWidget {
         showAnimation: false,
       );
     }
-    
+
     return Container(
       width: 40,
       height: 40,
@@ -190,7 +204,7 @@ class ChatMessageWidget extends StatelessWidget {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inSeconds < 60) {
       return 'vài giây trước';
     } else if (difference.inMinutes < 60) {
@@ -207,10 +221,7 @@ class ChatMessageWidget extends StatelessWidget {
 class AvatarInfoWidget extends StatelessWidget {
   final AvatarConfiguration avatarConfig;
 
-  const AvatarInfoWidget({
-    super.key,
-    required this.avatarConfig,
-  });
+  const AvatarInfoWidget({super.key, required this.avatarConfig});
 
   @override
   Widget build(BuildContext context) {

@@ -17,9 +17,13 @@ class SpeechToTextService {
   String? _errorMessage;
   Function(SpeechRecognitionState)? _onStateChanged;
   Function(String)? _onTextRecognized;
+  Function(String)? _onPartialTextRecognized; // For real-time partial results
   Function(String)? _onError;
+  Function(double)? _onSoundLevelChanged; // For sound level changes
   double _currentVolume = 0.0;
   bool _isListening = false;
+  bool _enableRealTimeResults = true; // Flag to enable/disable real-time updates
+  String? _partialText; // For partial recognition results
 
   // Getters
   SpeechRecognitionState get state => _state;
@@ -38,9 +42,25 @@ class SpeechToTextService {
     _onTextRecognized = listener;
   }
 
+  void setPartialTextRecognizedListener(Function(String) listener) {
+    _onPartialTextRecognized = listener;
+  }
+
   void setErrorListener(Function(String) listener) {
     _onError = listener;
   }
+
+  void setSoundLevelListener(Function(double) listener) {
+    _onSoundLevelChanged = listener;
+  }
+
+  // Enable or disable real-time partial results
+  void setRealTimeResultsEnabled(bool enabled) {
+    _enableRealTimeResults = enabled;
+  }
+
+  // Check if real-time results are enabled
+  bool get isRealTimeResultsEnabled => _enableRealTimeResults;
 
   // Initialize speech recognition
   Future<bool> initialize() async {
@@ -52,7 +72,11 @@ class SpeechToTextService {
 
       final isAvailable = await _speechToText.initialize(
         onStatus: _handleStatusChange,
-        onError: (error) => _handleError(error.toString()),
+        onError: (dynamic error) {
+          // Handle different error types safely (Event on web, SpeechRecognitionError on mobile)
+          String errorMessage = _extractErrorMessage(error);
+          _handleError(errorMessage);
+        },
       );
 
       if (isAvailable) {
@@ -74,7 +98,11 @@ class SpeechToTextService {
     try {
       return await _speechToText.initialize(
         onStatus: _handleStatusChange,
-        onError: (error) => _handleError(error.toString()),
+        onError: (dynamic error) {
+          // Handle different error types safely
+          String errorMessage = _extractErrorMessage(error);
+          _handleError(errorMessage);
+        },
       );
     } catch (e) {
       return false;
@@ -84,10 +112,8 @@ class SpeechToTextService {
   // Start listening for speech
   Future<bool> startListening() async {
     try {
-      if (_state != SpeechRecognitionState.idle) {
-        _setError('Cannot start listening. Speech recognition is already in use');
-        return false;
-      }
+      // Ensure proper cleanup before starting
+      await _ensureCleanState();
 
       if (!_speechToText.isAvailable) {
         _setError('Speech recognition is not available');
@@ -98,17 +124,33 @@ class SpeechToTextService {
       _isListening = true;
       _clearError();
 
-      final success = await _speechToText.listen(
-        onResult: _handleRecognitionResult,
-        onSoundLevelChange: _handleSoundLevel,
-      );
+      // Wrap speech_to_text calls in additional error handling for web platform
+      bool success = false;
+      try {
+        // Handle case where listen() might return null on web platform
+        final result = await _speechToText.listen(
+          onResult: _handleRecognitionResultSafely,
+          onSoundLevelChange: _handleSoundLevel,
+          partialResults: _enableRealTimeResults, // Enable partial results for real-time updates
+        );
+        
+        // Safely handle nullable return value
+        success = result == true;
+      } catch (e) {
+        // Handle speech_to_text package internal errors (especially on web)
+        print('Speech recognition internal error: $e');
+        _setState(SpeechRecognitionState.error);
+        _isListening = false;
+        _setError('Speech recognition internal error');
+        return false;
+      }
 
       if (success) {
         return true;
       } else {
         _setState(SpeechRecognitionState.error);
         _isListening = false;
-        _setError('Failed to start listening');
+        _setError('Failed to start listening - microphone may be in use');
         return false;
       }
     } catch (e) {
@@ -230,7 +272,11 @@ class SpeechToTextService {
     try {
       return await _speechToText.initialize(
         onStatus: _handleStatusChange,
-        onError: (error) => _handleError(error.toString()),
+        onError: (dynamic error) {
+          // Handle different error types safely
+          String errorMessage = _extractErrorMessage(error);
+          _handleError(errorMessage);
+        },
       );
     } catch (e) {
       return false;
@@ -242,22 +288,55 @@ class SpeechToTextService {
     _lastRecognizedText = null;
   }
 
+  // Ensure clean state before starting new session
+  Future<void> _ensureCleanState() async {
+    try {
+      // Force stop and cancel any existing session
+      if (_isListening || _state != SpeechRecognitionState.idle) {
+        print('Speech recognition cleaning state: $_state, listening: $_isListening');
+        
+        // Try to stop first
+        try {
+          await _speechToText.stop();
+          await Future.delayed(const Duration(milliseconds: 150));
+        } catch (e) {
+          print('Error during speech stop: $e');
+        }
+        
+        // Then cancel to ensure complete cleanup
+        try {
+          await _speechToText.cancel();
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          print('Error during speech cancel: $e');
+        }
+      }
+      
+      // Reset all internal state variables
+      _isListening = false;
+      _lastRecognizedText = null;
+      _partialText = null;
+      _currentVolume = 0.0;
+      _state = SpeechRecognitionState.idle;
+      _clearError();
+      
+      // Notify state change
+      _onStateChanged?.call(_state);
+      
+      print('Speech recognition state cleaned to: $_state');
+    } catch (e) {
+      print('Error ensuring clean state: $e');
+      // Force reset even if there were errors
+      _isListening = false;
+      _state = SpeechRecognitionState.idle;
+      _clearError();
+    }
+  }
+
   // Reset service
   Future<void> reset() async {
     try {
-      // Stop listening if active
-      if (_isListening) {
-        await _speechToText.stop();
-      }
-
-      // Reset state
-      _state = SpeechRecognitionState.idle;
-      _isListening = false;
-      _lastRecognizedText = null;
-      _currentVolume = 0.0;
-      _clearError();
-
-      _onStateChanged?.call(_state);
+      await _ensureCleanState();
     } catch (e) {
       _setError('Failed to reset speech recognition: $e');
     }
@@ -288,17 +367,39 @@ class SpeechToTextService {
   void _handleRecognitionResult(SpeechRecognitionResult result) {
     try {
       if (result.finalResult) {
+        // Final result - speech recognition completed
         _lastRecognizedText = result.recognizedWords;
         _setState(SpeechRecognitionState.completed);
         _isListening = false;
         _onTextRecognized?.call(_lastRecognizedText!);
+        _onPartialTextRecognized?.call(''); // Clear partial text
       } else {
-        // Partial result
+        // Partial result - real-time transcription
         _lastRecognizedText = result.recognizedWords;
+        if (_enableRealTimeResults) {
+          _onPartialTextRecognized?.call(_lastRecognizedText!);
+        }
         _onTextRecognized?.call(_lastRecognizedText!);
       }
     } catch (e) {
       _setError('Failed to process recognition result: $e');
+    }
+  }
+
+  // Safe wrapper for handling recognition results to catch web platform errors
+  void _handleRecognitionResultSafely(SpeechRecognitionResult result) {
+    try {
+      _handleRecognitionResult(result);
+    } catch (e) {
+      // Handle any unexpected errors from speech_to_text package
+      print('Error in recognition result handler: $e');
+      try {
+        _setError('Speech recognition processing error');
+        _setState(SpeechRecognitionState.error);
+        _isListening = false;
+      } catch (e2) {
+        print('Critical error in error handling: $e2');
+      }
     }
   }
 
@@ -311,6 +412,7 @@ class SpeechToTextService {
 
   void _handleSoundLevel(double level) {
     _currentVolume = level;
+    _onSoundLevelChanged?.call(level);
   }
 
   void _setState(SpeechRecognitionState newState) {
@@ -326,13 +428,64 @@ class SpeechToTextService {
     _errorMessage = null;
   }
 
+  // Extract error message safely from different error types
+  String _extractErrorMessage(dynamic error) {
+    try {
+      if (error == null) {
+        return 'Unknown speech recognition error';
+      }
+      
+      // Handle different error types
+      String errorStr = error.toString();
+      
+      // Try to extract meaningful error message from various formats
+      if (errorStr.contains('errorMsg:')) {
+        try {
+          final parts = errorStr.split('errorMsg:');
+          if (parts.length > 1) {
+            final msgPart = parts[1].split('}')[0].trim();
+            if (msgPart.isNotEmpty) {
+              return msgPart;
+            }
+          }
+        } catch (e) {
+          // Continue to fallback
+        }
+      }
+      
+      // Check for common error patterns
+      if (errorStr.contains('network') || errorStr.contains('connection')) {
+        return 'Network connection error';
+      } else if (errorStr.contains('permission') || errorStr.contains('denied')) {
+        return 'Microphone permission denied';
+      } else if (errorStr.contains('not-supported')) {
+        return 'Speech recognition not supported';
+      } else if (errorStr.contains('busy') || errorStr.contains('in use')) {
+        return 'Microphone is busy or in use';
+      }
+      
+      // Return the raw error string if no specific pattern matched
+      return errorStr.isNotEmpty ? errorStr : 'Speech recognition error occurred';
+    } catch (e) {
+      return 'Speech recognition error occurred';
+    }
+  }
+
   // Cleanup
   void dispose() {
-    if (_isListening) {
-      _speechToText.stop();
+    try {
+      if (_isListening || _state != SpeechRecognitionState.idle) {
+        _speechToText.cancel();
+      }
+    } catch (e) {
+      print('Error during speech service disposal: $e');
     }
+    
+    _isListening = false;
+    _state = SpeechRecognitionState.idle;
     _onStateChanged = null;
     _onTextRecognized = null;
+    _onPartialTextRecognized = null;
     _onError = null;
   }
 }

@@ -38,7 +38,7 @@ class AvatarConfigApp extends StatelessWidget {
       providers: [
         // App State Provider
         ChangeNotifierProvider<AppStateProvider>(
-          create: (_) => AppStateProvider()..initialize(),
+          create: (_) => AppStateProvider(),
         ),
         
         // Avatar Provider with real SQLite repository
@@ -61,6 +61,13 @@ class AvatarConfigApp extends StatelessWidget {
       ],
       child: Consumer<AppStateProvider>(
         builder: (context, appState, child) {
+          // Initialize the app state asynchronously after the widget is built
+          if (!appState.isInitializing && appState.isFirstLaunch) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              appState.initialize();
+            });
+          }
+          
           return MaterialApp(
             title: 'Avatar Config App',
             debugShowCheckedModeBanner: false,
@@ -71,8 +78,8 @@ class AvatarConfigApp extends StatelessWidget {
             themeMode: appState.themeMode,
             
             // Home Screen
-            home: appState.isInitializing 
-                ? const SplashScreen() 
+            home: appState.isInitializing
+                ? const SplashScreen()
                 : const AppNavigator(),
             
             // Error handling

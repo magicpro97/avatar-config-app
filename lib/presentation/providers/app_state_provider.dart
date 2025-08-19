@@ -122,24 +122,44 @@ class AppStateProvider extends ChangeNotifier {
 
   // Loading states
   void setInitializing(bool initializing) {
-    _isInitializing = initializing;
-    notifyListeners();
+    if (_isInitializing != initializing) {
+      _isInitializing = initializing;
+      // Only notify listeners if we're not in the middle of a build
+      try {
+        notifyListeners();
+      } catch (e) {
+        // Ignore setState during build errors
+        debugPrint('Warning: setState during build in setInitializing: $e');
+      }
+    }
   }
 
   void setSaving(bool saving) {
-    _isSaving = saving;
-    notifyListeners();
+    if (_isSaving != saving) {
+      _isSaving = saving;
+      // Only notify listeners if we're not in the middle of a build
+      try {
+        notifyListeners();
+      } catch (e) {
+        // Ignore setState during build errors
+        debugPrint('Warning: setState during build in setSaving: $e');
+      }
+    }
   }
 
   // Error handling
   void setGlobalError(String? error) {
-    _globalError = error;
-    notifyListeners();
+    if (_globalError != error) {
+      _globalError = error;
+      notifyListeners();
+    }
   }
 
   void clearGlobalError() {
-    _globalError = null;
-    notifyListeners();
+    if (_globalError != null) {
+      _globalError = null;
+      notifyListeners();
+    }
   }
 
   // Show global error with auto-dismiss
@@ -157,7 +177,10 @@ class AppStateProvider extends ChangeNotifier {
 
   // Initialize app state (load saved settings)
   Future<void> initialize() async {
-    setInitializing(true);
+    if (_isInitializing) return; // Prevent re-initialization
+    
+    // Don't call setInitializing(true) here as it causes setState during build
+    _isInitializing = true;
     
     try {
       // Initialize SharedPreferences
@@ -169,7 +192,8 @@ class AppStateProvider extends ChangeNotifier {
     } catch (e) {
       setGlobalError('Failed to initialize app: $e');
     } finally {
-      setInitializing(false);
+      _isInitializing = false;
+      notifyListeners();
     }
   }
 
