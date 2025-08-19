@@ -21,7 +21,6 @@ class SpeechToTextService {
   Function(String)? _onTextRecognized;
   Function(String)? _onPartialTextRecognized; // For real-time partial results
   Function(String)? _onError;
-  Function(double)? _onSoundLevelChanged; // For sound level changes
   double _currentVolume = 0.0;
   bool _isListening = false;
   bool _enableRealTimeResults = true; // Flag to enable/disable real-time updates
@@ -56,7 +55,7 @@ class SpeechToTextService {
   }
 
   void setSoundLevelListener(Function(double) listener) {
-    _onSoundLevelChanged = listener;
+    // No-op: sound level callbacks disabled in current implementation
   }
 
   // Enable or disable real-time partial results
@@ -149,7 +148,7 @@ class SpeechToTextService {
             return;
           }
           // Append a simple dot sequence to indicate activity
-          _partialText = (_partialText!.length >= 10) ? '' : (_partialText! + '.');
+          _partialText = (_partialText!.length >= 10) ? '' : ('${_partialText!}.');
           if (_enableRealTimeResults) {
             _onPartialTextRecognized?.call(_partialText!);
           }
@@ -198,7 +197,7 @@ class SpeechToTextService {
         success = result == true;
       } catch (e) {
         // Handle speech_to_text package internal errors (especially on web)
-        print('Speech recognition internal error: $e');
+        debugPrint('Speech recognition internal error: $e');
         _setState(SpeechRecognitionState.error);
         _isListening = false;
         _setError('Speech recognition internal error');
@@ -379,14 +378,14 @@ class SpeechToTextService {
     try {
       // Force stop and cancel any existing session
       if (_isListening || _state != SpeechRecognitionState.idle) {
-        print('Speech recognition cleaning state: $_state, listening: $_isListening');
+        debugPrint('Speech recognition cleaning state: $_state, listening: $_isListening');
         
         // Try to stop first
         try {
           await _speechToText.stop();
           await Future.delayed(const Duration(milliseconds: 150));
         } catch (e) {
-          print('Error during speech stop: $e');
+          debugPrint('Error during speech stop: $e');
         }
         
         // Then cancel to ensure complete cleanup
@@ -394,7 +393,7 @@ class SpeechToTextService {
           await _speechToText.cancel();
           await Future.delayed(const Duration(milliseconds: 200));
         } catch (e) {
-          print('Error during speech cancel: $e');
+          debugPrint('Error during speech cancel: $e');
         }
       }
       
@@ -409,9 +408,9 @@ class SpeechToTextService {
       // Notify state change
       _onStateChanged?.call(_state);
       
-      print('Speech recognition state cleaned to: $_state');
+      debugPrint('Speech recognition state cleaned to: $_state');
     } catch (e) {
-      print('Error ensuring clean state: $e');
+      debugPrint('Error ensuring clean state: $e');
       // Force reset even if there were errors
       _isListening = false;
       _state = SpeechRecognitionState.idle;
@@ -478,13 +477,13 @@ class SpeechToTextService {
       _handleRecognitionResult(result);
     } catch (e) {
       // Handle any unexpected errors from speech_to_text package
-      print('Error in recognition result handler: $e');
+      debugPrint('Error in recognition result handler: $e');
       try {
         _setError('Speech recognition processing error');
         _setState(SpeechRecognitionState.error);
         _isListening = false;
       } catch (e2) {
-        print('Critical error in error handling: $e2');
+        debugPrint('Critical error in error handling: $e2');
       }
     }
   }
@@ -496,10 +495,7 @@ class SpeechToTextService {
     _onError?.call(error);
   }
 
-  void _handleSoundLevel(double level) {
-    _currentVolume = level;
-    _onSoundLevelChanged?.call(level);
-  }
+  // (sound level handler removed; not used)
 
   void _setState(SpeechRecognitionState newState) {
     _state = newState;
@@ -569,7 +565,7 @@ class SpeechToTextService {
             .whenComplete(() => _speechToText.cancel().catchError((_) {}));
       }
     } catch (e) {
-      print('Error during speech service disposal: $e');
+      debugPrint('Error during speech service disposal: $e');
     }
     
     _isListening = false;

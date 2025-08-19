@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 // Web implementation: real recording via MediaRecorder, keeping API parity.
 // No dart:io used. Uses JS interop to access MediaRecorder.
 import 'dart:async';

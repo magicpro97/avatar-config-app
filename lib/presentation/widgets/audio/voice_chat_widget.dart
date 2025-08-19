@@ -266,17 +266,6 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     }
   }
 
-  // Fast state transition for stop actions (no delays)
-  Future<void> _fastStateTransition(Future<void> Function() action) async {
-    try {
-      await action();
-      _ensureStateConsistency();
-    } catch (e) {
-      _setError('State transition error: $e');
-      _ensureStateConsistency();
-    }
-  }
-
   // Regular state transition with delays for start actions
   Future<void> _safeStateTransition(Future<void> Function() action) async {
     try {
@@ -312,42 +301,6 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       // Log error but continue - this is a cleanup operation
       debugPrint('Error ensuring microphone released: $e');
     }
-  }
-
-  Future<void> _handleStartRecording() async {
-    await _debouncedButtonPress(() async {
-      await _safeStateTransition(() async {
-        try {
-          _clearError();
-
-          // Ensure speech recognition is fully stopped before starting recording
-          if (_speechService.state != SpeechRecognitionState.idle) {
-            await _speechService.stopListening();
-            await Future.delayed(const Duration(milliseconds: 220));
-            if (_speechService.state != SpeechRecognitionState.idle) {
-              await _speechService.cancelListening();
-              await Future.delayed(const Duration(milliseconds: 120));
-            }
-          }
-
-          // Check recording permissions
-          final hasPermission = await _recordingService.hasRecordingPermission();
-          if (!hasPermission) {
-            _setError('Microphone permission is required for voice recording');
-            return;
-          }
-
-          // Start recording
-          final success = await _recordingService.startRecording();
-          if (!success) {
-            _setError('Failed to start recording');
-            return;
-          }
-        } catch (e) {
-          _setError('Failed to start recording: $e');
-        }
-      });
-    });
   }
 
   Future<void> _handleStopRecording() async {

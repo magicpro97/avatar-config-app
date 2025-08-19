@@ -8,6 +8,7 @@ import '../errors/exceptions.dart' as app_exceptions;
 import '../utils/platform_utils.dart';
 import 'web_storage_helper.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static DatabaseHelper? _instance;
@@ -154,7 +155,7 @@ class DatabaseHelper {
       StorageKeys.avatarConfigurationsTable,
     );
 
-    print('DEBUG: Migrating ${existingConfigs.length} existing configurations');
+    debugPrint('Migrating ${existingConfigs.length} existing configurations');
 
     int successfulMigrations = 0;
     int failedMigrations = 0;
@@ -167,23 +168,23 @@ class DatabaseHelper {
         String personalityType = 'casual'; // Default
         if (config['personality_type'] != null) {
           final oldPersonalityType = config['personality_type'] as String;
-          print('DEBUG: Migrating personality type: $oldPersonalityType');
+          debugPrint('Migrating personality type: $oldPersonalityType');
           
           // Enhanced validation and mapping of personality types
           final validTypes = ['happy', 'romantic', 'funny', 'professional', 'casual', 'energetic', 'calm', 'mysterious'];
           if (validTypes.contains(oldPersonalityType)) {
             personalityType = oldPersonalityType;
-            print('DEBUG: Valid personality type mapped: $personalityType');
+            debugPrint('Valid personality type mapped: $personalityType');
           } else {
-            print('WARNING: Unknown personality type $oldPersonalityType, defaulting to casual');
+            debugPrint('WARNING: Unknown personality type $oldPersonalityType, defaulting to casual');
             // Log the unknown type for future analysis
-            print('DEBUG: Unknown personality type encountered: $oldPersonalityType in config: ${config['id']}');
+            debugPrint('Unknown personality type encountered: $oldPersonalityType in config: ${config['id']}');
           }
         } else {
-          print('DEBUG: No personality_type found in config: ${config['id']}, using default casual');
+          debugPrint('No personality_type found in config: ${config['id']}, using default casual');
         }
         
-        print('DEBUG: Using personality type: $personalityType');
+        debugPrint('Using personality type: $personalityType');
 
         // Enhanced voice data migration with fallback handling
         final voiceData = {
@@ -197,7 +198,7 @@ class DatabaseHelper {
 
         // Validate voice data
         if (voiceData['voiceId'].isEmpty) {
-          print('WARNING: Empty voiceId for config: ${config['id']}, using default');
+          debugPrint('WARNING: Empty voiceId for config: ${config['id']}, using default');
           voiceData['voiceId'] = 'default';
         }
 
@@ -223,25 +224,25 @@ class DatabaseHelper {
         );
         
         if (updateResult > 0) {
-          print('DEBUG: Successfully migrated configuration: ${config['id']}');
+          debugPrint('Successfully migrated configuration: ${config['id']}');
           successfulMigrations++;
         } else {
-          print('WARNING: No rows updated for configuration: ${config['id']}');
+          debugPrint('WARNING: No rows updated for configuration: ${config['id']}');
           failedMigrations++;
         }
       } catch (e, stackTrace) {
-        print('ERROR: Failed to migrate configuration ${config['id']}: $e');
-        print('ERROR: Stack trace: $stackTrace');
-        print('ERROR: Config data: $config');
+        debugPrint('ERROR: Failed to migrate configuration ${config['id']}: $e');
+        debugPrint('ERROR: Stack trace: $stackTrace');
+        debugPrint('ERROR: Config data: $config');
         failedMigrations++;
         // Continue with other configurations to avoid blocking the entire migration
       }
     }
     
-    print('DEBUG: Migration completed. Successful: $successfulMigrations, Failed: $failedMigrations');
+    debugPrint('Migration completed. Successful: $successfulMigrations, Failed: $failedMigrations');
     
     if (failedMigrations > 0) {
-      print('WARNING: $failedMigrations configurations failed to migrate. Check logs for details.');
+      debugPrint('WARNING: $failedMigrations configurations failed to migrate. Check logs for details.');
     }
   }
 

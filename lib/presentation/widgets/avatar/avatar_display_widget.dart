@@ -95,7 +95,7 @@ class _AvatarDisplayWidgetState extends State<AvatarDisplayWidget>
             ),
             boxShadow: [
               BoxShadow(
-                color: _getPersonalityColor().withOpacity(0.3),
+                color: _getPersonalityColor().withValues(alpha: 0.3),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),

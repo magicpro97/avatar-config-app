@@ -60,7 +60,7 @@ class ChatMessageWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -104,7 +104,7 @@ class ChatMessageWidget extends StatelessWidget {
                                 size: 14,
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -132,7 +132,7 @@ class ChatMessageWidget extends StatelessWidget {
                       style: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -231,7 +231,7 @@ class AvatarInfoWidget extends StatelessWidget {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(

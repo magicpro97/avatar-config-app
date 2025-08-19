@@ -114,11 +114,8 @@ class _AudioWaveVisualizerState extends State<AudioWaveVisualizer>
   void _startSimulatedData() {
     if (!mounted) return;
     
-    // Cancel any existing timer
-    Timer? existingTimer;
-    
+    // Periodic simulated samples when active
     Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      existingTimer = timer;
       if (!mounted) {
         timer.cancel();
         return;
