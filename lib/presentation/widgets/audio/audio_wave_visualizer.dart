@@ -184,10 +184,10 @@ class _AudioWaveVisualizerState extends State<AudioWaveVisualizer>
       _isInitialized = true;
       _handleRecordingStateChange(widget.recordingService.state);
       
-      // Set up speech service listeners if available
+      // Set up speech sound level listener if available (do not override state listener from parent)
       if (widget.speechService != null) {
-        widget.speechService!.setStateListener(_handleSpeechStateChange);
         widget.speechService!.setSoundLevelListener(_handleSpeechSoundLevel);
+        // One-time sync with current speech state for initial animation
         _handleSpeechStateChange(widget.speechService!.state);
       }
     }

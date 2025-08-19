@@ -407,6 +407,10 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
         try {
           _clearError();
 
+          // Ensure previous session is fully cleaned up to avoid busy mic states
+          await _speechService.reset();
+          await Future.delayed(const Duration(milliseconds: 80));
+
           // Check if speech recognition is available
           final isAvailable = await _speechService.isAvailable();
           if (!isAvailable) {
@@ -435,10 +439,6 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
   }
   Future<void> _handleStopListening() async {
     // Immediate UI feedback - no debouncing for stop actions
-    if (!_isListening) {
-      _setError('Not currently listening');
-      return;
-    }
 
     // Immediately unfocus text field and update UI
     FocusScope.of(context).unfocus();
@@ -450,18 +450,22 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       });
     }
 
-    // Run speech service cleanup in background without blocking UI
-    _speechService.stopListening().then((result) {
+    // Prefer fast cancel over full stop to avoid platform hangs
+    _speechService.cancelListening().then((ok) async {
       if (mounted) {
-        if (result == null) {
-          _setError('Failed to stop speech recognition');
-        } else {
+        if (ok) {
           _clearError();
+        } else {
+          _setError('Failed to cancel speech recognition');
         }
       }
+      // Force reset to guarantee microphone is released
+      try {
+        await _speechService.reset();
+      } catch (_) {}
     }).catchError((e) {
       if (mounted) {
-        _setError('Failed to stop speech recognition: $e');
+        _setError('Failed to cancel speech recognition: $e');
       }
     });
   }
@@ -508,8 +512,8 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
               constraints: const BoxConstraints(minHeight: 40),
               child: TextField(
                 controller: _textController,
-                // Prevent automatic focus when listening is active
-                enabled: !_isListening && !_isRecording,
+                // Keep enabled so suffix actions remain tappable; just make read-only
+                readOnly: _isListening || _isRecording,
                 decoration: InputDecoration(
                   hintText: _isListening ? 'Đang nghe...' : 'Nhập tin nhắn hoặc nhấn nút ghi âm...',
                   hintStyle: theme.textTheme.bodySmall?.copyWith(
