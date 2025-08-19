@@ -205,7 +205,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     if (mounted) {
       setState(() {
         // Only disable voice button, not send button
-        _isButtonDisabled = _isRecording || _isListening || _isStopping;
+        _isButtonDisabled = _isRecording || _isListening; // keep responsive when stopping
       });
     }
   }
@@ -399,7 +399,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     if (mounted) {
       setState(() {
         _isListening = false; // Immediate UI update
-        _isStopping = false; // Don't set stopping state that blocks UI
+        _isStopping = true; // show spinner briefly
       });
     }
 
@@ -416,9 +416,17 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       try {
         await _speechService.reset();
       } catch (_) {}
+      // Keep spinner for a short duration for smoother UX
+      await Future.delayed(const Duration(milliseconds: 220));
+      if (mounted) {
+        setState(() {
+          _isStopping = false;
+        });
+      }
     }).catchError((e) {
       if (mounted) {
         _setError('Failed to cancel speech recognition: $e');
+        _isStopping = false;
       }
     });
   }
@@ -557,15 +565,30 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                _isRecording || _isListening
-                                    ? Icons.stop
-                                    : Icons.mic,
-                                size: 24, // Larger icon
-                                color: _isRecording || _isListening
-                                    ? colorScheme.onError
-                                    : colorScheme.onPrimaryContainer,
-                              ),
+                              child: (_isRecording || _isListening)
+                                  ? (_isStopping
+                                      ? Center(
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                colorScheme.onError,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.stop,
+                                          size: 24,
+                                          color: colorScheme.onError,
+                                        ))
+                                  : Icon(
+                                      Icons.mic,
+                                      size: 24,
+                                      color: colorScheme.onPrimaryContainer,
+                                    ),
                             ),
                           ),
                         ),

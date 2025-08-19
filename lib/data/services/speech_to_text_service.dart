@@ -28,6 +28,23 @@ class SpeechToTextService {
   // Web fallback mode to avoid platform plugin issues
   final bool _useWebFallback = kIsWeb;
   Timer? _fallbackTimer;
+  bool _isOperationInProgress = false; // Prevent concurrent start/stop/cancel
+  DateTime? _lastStateChangeAt;
+
+  bool _canTransition(SpeechRecognitionState from, SpeechRecognitionState to) {
+    switch (from) {
+      case SpeechRecognitionState.idle:
+        return to == SpeechRecognitionState.listening || to == SpeechRecognitionState.idle || to == SpeechRecognitionState.error;
+      case SpeechRecognitionState.listening:
+        return to == SpeechRecognitionState.processing || to == SpeechRecognitionState.completed || to == SpeechRecognitionState.error || to == SpeechRecognitionState.idle;
+      case SpeechRecognitionState.processing:
+        return to == SpeechRecognitionState.completed || to == SpeechRecognitionState.error || to == SpeechRecognitionState.idle;
+      case SpeechRecognitionState.completed:
+        return to == SpeechRecognitionState.idle || to == SpeechRecognitionState.listening || to == SpeechRecognitionState.error;
+      case SpeechRecognitionState.error:
+        return to == SpeechRecognitionState.idle || to == SpeechRecognitionState.listening || to == SpeechRecognitionState.error;
+    }
+  }
 
   // Getters
   SpeechRecognitionState get state => _state;
@@ -132,6 +149,11 @@ class SpeechToTextService {
   // Start listening for speech
   Future<bool> startListening() async {
     try {
+      if (_isOperationInProgress) {
+        _setError('Speech recognition is busy');
+        return false;
+      }
+      _isOperationInProgress = true;
       // Ensure proper cleanup before starting
       await _ensureCleanState();
 
@@ -218,11 +240,19 @@ class SpeechToTextService {
       _setError('Failed to start listening: $e');
       return false;
     }
+    finally {
+      _isOperationInProgress = false;
+    }
   }
 
   // Stop listening
   Future<String?> stopListening() async {
     try {
+      if (_isOperationInProgress) {
+        _setError('Speech recognition is busy');
+        return null;
+      }
+      _isOperationInProgress = true;
       if (_useWebFallback) {
         // Complete simulated session
         _fallbackTimer?.cancel();
@@ -260,11 +290,21 @@ class SpeechToTextService {
       _setError('Failed to stop listening: $e');
       return null;
     }
+    finally {
+      _isOperationInProgress = false;
+    }
   }
 
   // Cancel listening
   Future<bool> cancelListening() async {
     try {
+      if (_isOperationInProgress) {
+        // Try to still force idle without hitting engine
+        _isListening = false;
+        _setState(SpeechRecognitionState.idle);
+        return true;
+      }
+      _isOperationInProgress = true;
       if (_useWebFallback) {
         _fallbackTimer?.cancel();
         _fallbackTimer = null;
@@ -287,6 +327,9 @@ class SpeechToTextService {
       _isListening = false;
       _setError('Failed to cancel listening: $e');
       return false;
+    }
+    finally {
+      _isOperationInProgress = false;
     }
   }
 
@@ -421,9 +464,14 @@ class SpeechToTextService {
   // Reset service
   Future<void> reset() async {
     try {
+      if (_isOperationInProgress) return;
+      _isOperationInProgress = true;
       await _ensureCleanState();
     } catch (e) {
       _setError('Failed to reset speech recognition: $e');
+    }
+    finally {
+      _isOperationInProgress = false;
     }
   }
 
@@ -498,8 +546,13 @@ class SpeechToTextService {
   // (sound level handler removed; not used)
 
   void _setState(SpeechRecognitionState newState) {
-    _state = newState;
-    _onStateChanged?.call(newState);
+    if (_canTransition(_state, newState)) {
+      _state = newState;
+      _lastStateChangeAt = DateTime.now();
+      _onStateChanged?.call(newState);
+    } else {
+      debugPrint('Ignored invalid state transition: $_state -> $newState');
+    }
   }
 
   void _setError(String message) {
