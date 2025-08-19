@@ -25,8 +25,8 @@ class SpeechToTextService {
   bool _isListening = false;
   bool _enableRealTimeResults = true; // Flag to enable/disable real-time updates
   String? _partialText; // For partial recognition results
-  // Web fallback mode to avoid platform plugin issues
-  final bool _useWebFallback = kIsWeb;
+  // Web fallback mode to avoid platform plugin issues (can be overridden by settings)
+  bool _useWebFallback = kIsWeb;
   Timer? _fallbackTimer;
   bool _isOperationInProgress = false; // Prevent concurrent start/stop/cancel
   DateTime? _lastStateChangeAt;
@@ -473,6 +473,11 @@ class SpeechToTextService {
     finally {
       _isOperationInProgress = false;
     }
+  }
+
+  // Allow external config to control fallback behavior
+  void setUseWebFallback(bool value) {
+    _useWebFallback = value;
   }
 
   // Private helper methods

@@ -146,6 +146,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
         case 'appVersion':
           updatedSettings = currentSettings.copyWith(appVersion: value as String);
           break;
+        case 'useWebSpeechFallback':
+          updatedSettings = currentSettings.copyWith(useWebSpeechFallback: value as bool);
+          break;
         default:
           throw ArgumentError('Unknown setting key: $key');
       }
@@ -194,6 +197,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
           return settings.lastBackupTime as T;
         case 'appVersion':
           return settings.appVersion as T;
+        case 'useWebSpeechFallback':
+          return settings.useWebSpeechFallback as T;
         default:
           return null;
       }

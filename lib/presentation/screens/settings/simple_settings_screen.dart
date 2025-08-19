@@ -227,6 +227,13 @@ class _SimpleSettingsScreenState extends State<SimpleSettingsScreen> {
                     value: _currentSettings!.enableHapticFeedback,
                     onChanged: (value) => _updateSetting('enableHapticFeedback', value),
                   ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    title: const Text('Web Speech fallback (Web)'),
+                    subtitle: const Text('Dùng cơ chế mô phỏng ổn định khi plugin web không ổn định'),
+                    value: _currentSettings!.useWebSpeechFallback,
+                    onChanged: (value) => _updateSetting('useWebSpeechFallback', value),
+                  ),
                 ],
               ),
             ),

@@ -36,6 +36,8 @@ class AppSettingsModel extends AppSettings {
   final DateTime lastBackupTime;
   @override
   final String appVersion;
+  @override
+  final bool useWebSpeechFallback;
 
   AppSettingsModel({
     this.language = 'vi',
@@ -54,6 +56,7 @@ class AppSettingsModel extends AppSettings {
     this.showTutorials = true,
     required this.lastBackupTime,
     required this.appVersion,
+    this.useWebSpeechFallback = true,
   });
 
   /// Create default settings
@@ -61,6 +64,7 @@ class AppSettingsModel extends AppSettings {
     return AppSettingsModel(
       lastBackupTime: DateTime.now(),
       appVersion: '1.0.0',
+      useWebSpeechFallback: true,
     );
   }
 
@@ -88,6 +92,7 @@ class AppSettingsModel extends AppSettings {
         json['lastBackupTime'] ?? DateTime.now().toIso8601String(),
       ),
       appVersion: json['appVersion'] ?? '1.0.0',
+      useWebSpeechFallback: json['useWebSpeechFallback'] ?? true,
     );
   }
 
@@ -111,6 +116,7 @@ class AppSettingsModel extends AppSettings {
       'showTutorials': showTutorials,
       'lastBackupTime': lastBackupTime.toIso8601String(),
       'appVersion': appVersion,
+      'useWebSpeechFallback': useWebSpeechFallback,
     };
   }
 
@@ -133,6 +139,7 @@ class AppSettingsModel extends AppSettings {
     bool? showTutorials,
     DateTime? lastBackupTime,
     String? appVersion,
+    bool? useWebSpeechFallback,
   }) {
     return AppSettingsModel(
       language: language ?? this.language,
@@ -151,6 +158,7 @@ class AppSettingsModel extends AppSettings {
       showTutorials: showTutorials ?? this.showTutorials,
       lastBackupTime: lastBackupTime ?? this.lastBackupTime,
       appVersion: appVersion ?? this.appVersion,
+      useWebSpeechFallback: useWebSpeechFallback ?? this.useWebSpeechFallback,
     );
   }
 
@@ -175,6 +183,7 @@ class AppSettingsModel extends AppSettings {
           showTutorials == other.showTutorials &&
           lastBackupTime == other.lastBackupTime &&
           appVersion == other.appVersion;
+          
 
   @override
   int get hashCode => Object.hash(
@@ -194,6 +203,7 @@ class AppSettingsModel extends AppSettings {
         showTutorials,
         lastBackupTime,
         appVersion,
+        useWebSpeechFallback,
       );
 
   @override
@@ -214,7 +224,8 @@ class AppSettingsModel extends AppSettings {
         'enableQuickAccess: $enableQuickAccess, '
         'showTutorials: $showTutorials, '
         'lastBackupTime: $lastBackupTime, '
-        'appVersion: $appVersion'
+        'appVersion: $appVersion, '
+        'useWebSpeechFallback: $useWebSpeechFallback'
         ')';
   }
 }

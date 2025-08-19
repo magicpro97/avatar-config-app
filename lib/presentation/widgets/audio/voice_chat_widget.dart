@@ -1,8 +1,10 @@
 // Voice Chat Widget for two-way voice communication
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../data/services/voice_recording_service.dart';
 import '../../../data/services/speech_to_text_service.dart';
 import 'audio_wave_visualizer.dart';
+import '../../../data/repositories/settings_repository_impl.dart';
 
 
 class VoiceChatWidget extends StatefulWidget {
@@ -87,6 +89,13 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     try {
       _recordingService = VoiceRecordingService();
       _speechService = SpeechToTextService();
+
+      // Apply runtime settings for web speech fallback
+      try {
+        final settingsRepo = SettingsRepositoryImpl();
+        final useFallback = await settingsRepo.getSetting<bool>('useWebSpeechFallback') ?? true;
+        _speechService.setUseWebFallback(useFallback);
+      } catch (_) {}
 
       // Initialize speech recognition
       final speechInitialized = await _speechService.initialize();
@@ -197,6 +206,47 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       setState(() {
         _errorMessage = null;
       });
+    }
+  }
+
+  // Friendly error helpers
+  String _friendlyErrorText(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('permission') || lower.contains('denied')) {
+      return 'Ứng dụng chưa có quyền micro. Hãy cấp quyền rồi thử lại.';
+    }
+    if (lower.contains('busy') || lower.contains('in use')) {
+      return 'Micro đang bận bởi ứng dụng khác. Đóng tab/ứng dụng đang dùng micro và thử lại.';
+    }
+    if (lower.contains('not supported')) {
+      return 'Trình duyệt của bạn không hỗ trợ tính năng nhận dạng giọng nói.';
+    }
+    if (lower.contains('network') || lower.contains('connection')) {
+      return 'Lỗi kết nối mạng. Kiểm tra mạng rồi thử lại.';
+    }
+    return raw;
+  }
+
+  Future<void> _handleCheckMicPermission() async {
+    try {
+      final hasPerm = await _speechService.isMicrophoneAvailable();
+      if (!hasPerm) {
+        final granted = await _speechService.requestPermission();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(granted ? 'Đã cấp quyền micro' : 'Không thể cấp quyền micro')),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quyền micro đã được cấp')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể kiểm tra quyền micro: $e')),
+      );
     }
   }
 
@@ -453,7 +503,36 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
-    return Container(
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.keyM): const _StartVoiceIntent(),
+        LogicalKeySet(LogicalKeyboardKey.escape): const _StopVoiceIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _StartVoiceIntent: CallbackAction<_StartVoiceIntent>(
+            onInvoke: (intent) {
+              if (!_isRecording && !_isListening && !_isButtonDisabled) {
+                _handleStartListening();
+              }
+              return null;
+            },
+          ),
+          _StopVoiceIntent: CallbackAction<_StopVoiceIntent>(
+            onInvoke: (intent) {
+              if (_isRecording) {
+                _handleStopRecording();
+              } else if (_isListening) {
+                _handleStopListening();
+              }
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: false,
+          canRequestFocus: true,
+          child: Container(
       height: widget.height ?? 130,
       padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -697,23 +776,45 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
               ],
             ),
           
-          // Error message
+          // Error message with CTAs
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                _errorMessage!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.error,
-                  fontSize: 11,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              padding: const EdgeInsets.only(top: 6),
+              child: Column(
+                children: [
+                  Text(
+                    _friendlyErrorText(_errorMessage!),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
+                      fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: _handleStartListening,
+                        child: const Text('Thử lại'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: _handleCheckMicPermission,
+                        child: const Text('Kiểm tra quyền mic'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
         ],
       ),
+      ),
+          ),
+        ),
       ),
     );
   }
@@ -735,4 +836,12 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
     
     super.dispose();
   }
+}
+
+class _StartVoiceIntent extends Intent {
+  const _StartVoiceIntent();
+}
+
+class _StopVoiceIntent extends Intent {
+  const _StopVoiceIntent();
 }
