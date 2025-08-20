@@ -16,12 +16,18 @@ import '../../../core/network/api_client.dart';
 import '../../../presentation/widgets/audio/voice_chat_widget.dart';
 
 /// Demo chat screen that showcases avatar and voice configuration functionality
-class _SubmitMessageIntent extends Intent { const _SubmitMessageIntent(); }
+class _SubmitMessageIntent extends Intent {
+  const _SubmitMessageIntent();
+}
+
 class _SubmitMessageAction extends Action<_SubmitMessageIntent> {
   final VoidCallback onSubmit;
   _SubmitMessageAction(this.onSubmit);
   @override
-  Object? invoke(_SubmitMessageIntent intent) { onSubmit(); return null; }
+  Object? invoke(_SubmitMessageIntent intent) {
+    onSubmit();
+    return null;
+  }
 }
 
 class DemoChatScreen extends StatefulWidget {
@@ -38,30 +44,38 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   bool _isGeneratingVoice = false;
   bool _showVoiceChat = false;
 
-    Future<void> _loadInitialData() async {
+  Future<void> _loadInitialData() async {
     print('DEBUG: _loadInitialData called');
     if (!mounted) return;
-    
+
     // Load avatar configurations
     print('DEBUG: Loading avatar configurations...');
     await context.read<AvatarProvider>().loadConfigurations();
-    
+
     if (!mounted) return;
-    
+
     // Check active configuration after loading
     final avatarProvider = context.read<AvatarProvider>();
-    print('DEBUG: After loading - Active configuration: ${avatarProvider.activeConfiguration?.name ?? 'null'}');
-    print('DEBUG: After loading - Active configuration personality: ${avatarProvider.activeConfiguration?.personalityType ?? 'null'}');
-    print('DEBUG: After loading - Active configuration voice: ${avatarProvider.activeConfiguration?.voiceConfiguration.name ?? 'null'}');
-    print('DEBUG: After loading - Active configuration isActive: ${avatarProvider.activeConfiguration?.isActive ?? 'null'}');
-    
+    print(
+      'DEBUG: After loading - Active configuration: ${avatarProvider.activeConfiguration?.name ?? 'null'}',
+    );
+    print(
+      'DEBUG: After loading - Active configuration personality: ${avatarProvider.activeConfiguration?.personalityType ?? 'null'}',
+    );
+    print(
+      'DEBUG: After loading - Active configuration voice: ${avatarProvider.activeConfiguration?.voiceConfiguration.name ?? 'null'}',
+    );
+    print(
+      'DEBUG: After loading - Active configuration isActive: ${avatarProvider.activeConfiguration?.isActive ?? 'null'}',
+    );
+
     // Load voice configurations
     print('DEBUG: Loading voice configurations...');
     await context.read<VoiceProvider>().loadAvailableVoices();
-    
+
     // Initialize personality service with API key
     await _initializePersonalityService();
-    
+
     if (!mounted) return;
     // Add welcome message
     _addWelcomeMessage();
@@ -148,10 +162,10 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -526,7 +540,10 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   }
 
   Widget _buildConversationArea() {
-    return ListView.builder(cacheExtent: 1000.0, addRepaintBoundaries: true, addAutomaticKeepAlives: true, 
+    return ListView.builder(
+      cacheExtent: 1000.0,
+      addRepaintBoundaries: true,
+      addAutomaticKeepAlives: true,
       controller: _scrollController,
       padding: const EdgeInsets.all(8),
       itemCount: _conversationHistory.length,
@@ -608,67 +625,48 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
               children: [
                 Row(
                   children: [
-<<<<<<< HEAD
                     Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: 'Nhập tin nhắn của bạn...',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withValues(alpha: 0.6),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.3),
+                      child: Shortcuts(
+                        shortcuts: {
+                          SingleActivator(LogicalKeyboardKey.enter):
+                              const _SubmitMessageIntent(),
+                        },
+                        child: Actions(
+                          actions: {
+                            _SubmitMessageIntent: _SubmitMessageAction(() {
+                              _handleSendMessage();
+                            }),
+                          },
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Nhập tin nhắn của bạn...',
+                              hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.6),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.outline.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              enabled: !_isGeneratingVoice,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
                             ),
+                            onSubmitted: (_) => _handleSendMessage(),
+                            textInputAction: TextInputAction.send,
                           ),
-                          enabled: !_isGeneratingVoice,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-=======
-            Expanded(
-              child: Shortcuts(
-                shortcuts: {
-                  SingleActivator(LogicalKeyboardKey.enter): const _SubmitMessageIntent(),
-                },
-                child: Actions(
-                  actions: {
-                    _SubmitMessageIntent: _SubmitMessageAction(() { _handleSendMessage(); }),
-                  },
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Nhập tin nhắn của bạn...',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
->>>>>>> b44a14910c88d5d41dcd8f12724fc96aa9160207
                         ),
                       ),
-                      enabled: !_isGeneratingVoice,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
                     ),
-                    onSubmitted: (_) => _handleSendMessage(),
-                    textInputAction: TextInputAction.send,
-                  ),
-                ),
-              ),
-            ),
                     const SizedBox(width: 12),
 
                     // Voice synthesis button
