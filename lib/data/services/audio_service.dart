@@ -1,6 +1,7 @@
 // Audio Service for managing audio playback functionality
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -82,8 +83,21 @@ class AudioService {
         _setState(audioId, AudioState.completed);
       });
 
-      // Play the audio
-      await _audioPlayer.play(DeviceFileSource(audioSource));
+      // Handle web vs native platforms differently
+      if (kIsWeb && audioSource.startsWith('web_audio_')) {
+        // For web audio, use the cached audio data to create a data URL
+        final audioData = _audioDataCache[audioId];
+        if (audioData != null) {
+          final audioBlob = Uri.dataFromBytes(audioData, mimeType: 'audio/mp3');
+          await _audioPlayer.play(UrlSource(audioBlob.toString()));
+        } else {
+          throw const AudioException(message: 'Web audio data not found');
+        }
+      } else {
+        // For native platforms or file paths, use DeviceFileSource
+        await _audioPlayer.play(DeviceFileSource(audioSource));
+      }
+      
       _setState(audioId, AudioState.playing);
 
       // Cache the audio source
@@ -212,12 +226,15 @@ class AudioService {
 
   Future<void> clearCache() async {
     try {
-      // Delete all cached audio files
+      // Delete all cached audio files (only for native platforms)
       for (final audioPath in _audioCache.values) {
         try {
-          final file = File(audioPath);
-          if (await file.exists()) {
-            await file.delete();
+          // Only try to delete if it's a file path (not web audio)
+          if (!audioPath.startsWith('web_audio_')) {
+            final file = File(audioPath);
+            if (await file.exists()) {
+              await file.delete();
+            }
           }
         } catch (e) {
           // Ignore individual file deletion errors
@@ -226,6 +243,7 @@ class AudioService {
 
       // Clear cache maps
       _audioCache.clear();
+      _audioDataCache.clear(); // Clear web audio data cache
       _audioStates.clear();
       _audioDurations.clear();
       _audioPositions.clear();

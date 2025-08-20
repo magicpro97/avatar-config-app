@@ -49,6 +49,9 @@ class VoiceProvider extends ChangeNotifier {
   bool get isSynthesizing => _isSynthesizing;
   bool get isUpdatingSettings => _isUpdatingSettings;
   
+  // Audio service getter for VoicePlayerWidget
+  AudioService get audioService => _audioService;
+  
   // Audio playback getters
   String? get currentAudioId => _currentAudioId;
   AudioState get audioState => _audioState;
