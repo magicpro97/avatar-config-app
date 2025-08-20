@@ -38,6 +38,8 @@ class AppSettingsModel extends AppSettings {
   final String appVersion;
   @override
   final bool useWebSpeechFallback;
+  @override
+  final bool autoVoiceSynthesis;
 
   AppSettingsModel({
     this.language = 'vi',
@@ -57,6 +59,7 @@ class AppSettingsModel extends AppSettings {
     required this.lastBackupTime,
     required this.appVersion,
     this.useWebSpeechFallback = true,
+    this.autoVoiceSynthesis = false,
   });
 
   /// Create default settings
@@ -65,6 +68,7 @@ class AppSettingsModel extends AppSettings {
       lastBackupTime: DateTime.now(),
       appVersion: '1.0.0',
       useWebSpeechFallback: true,
+      autoVoiceSynthesis: false,
     );
   }
 
@@ -93,6 +97,7 @@ class AppSettingsModel extends AppSettings {
       ),
       appVersion: json['appVersion'] ?? '1.0.0',
       useWebSpeechFallback: json['useWebSpeechFallback'] ?? true,
+      autoVoiceSynthesis: json['autoVoiceSynthesis'] ?? false,
     );
   }
 
@@ -117,6 +122,7 @@ class AppSettingsModel extends AppSettings {
       'lastBackupTime': lastBackupTime.toIso8601String(),
       'appVersion': appVersion,
       'useWebSpeechFallback': useWebSpeechFallback,
+      'autoVoiceSynthesis': autoVoiceSynthesis,
     };
   }
 
@@ -140,6 +146,7 @@ class AppSettingsModel extends AppSettings {
     DateTime? lastBackupTime,
     String? appVersion,
     bool? useWebSpeechFallback,
+    bool? autoVoiceSynthesis,
   }) {
     return AppSettingsModel(
       language: language ?? this.language,
@@ -159,6 +166,7 @@ class AppSettingsModel extends AppSettings {
       lastBackupTime: lastBackupTime ?? this.lastBackupTime,
       appVersion: appVersion ?? this.appVersion,
       useWebSpeechFallback: useWebSpeechFallback ?? this.useWebSpeechFallback,
+      autoVoiceSynthesis: autoVoiceSynthesis ?? this.autoVoiceSynthesis,
     );
   }
 
@@ -182,7 +190,9 @@ class AppSettingsModel extends AppSettings {
           enableQuickAccess == other.enableQuickAccess &&
           showTutorials == other.showTutorials &&
           lastBackupTime == other.lastBackupTime &&
-          appVersion == other.appVersion;
+          appVersion == other.appVersion &&
+          useWebSpeechFallback == other.useWebSpeechFallback &&
+          autoVoiceSynthesis == other.autoVoiceSynthesis;
           
 
   @override
@@ -204,6 +214,7 @@ class AppSettingsModel extends AppSettings {
         lastBackupTime,
         appVersion,
         useWebSpeechFallback,
+        autoVoiceSynthesis,
       );
 
   @override
@@ -225,7 +236,8 @@ class AppSettingsModel extends AppSettings {
         'showTutorials: $showTutorials, '
         'lastBackupTime: $lastBackupTime, '
         'appVersion: $appVersion, '
-        'useWebSpeechFallback: $useWebSpeechFallback'
+        'useWebSpeechFallback: $useWebSpeechFallback, '
+        'autoVoiceSynthesis: $autoVoiceSynthesis'
         ')';
   }
 }

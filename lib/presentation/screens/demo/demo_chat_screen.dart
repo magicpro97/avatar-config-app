@@ -14,6 +14,7 @@ import '../../../data/services/personality_service.dart';
 import '../../../data/services/api_config_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../../presentation/widgets/audio/voice_chat_widget.dart';
+import '../../../data/repositories/settings_repository_impl.dart';
 
 /// Demo chat screen that showcases avatar and voice configuration functionality
 class _SubmitMessageIntent extends Intent {
@@ -139,16 +140,18 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     }
   }
 
-  void _addToConversation({
+  String? _addToConversation({
     required String message,
     required bool isUserMessage,
     AvatarConfiguration? avatarConfig,
     VoiceConfiguration? voiceConfig,
     String? audioId,
   }) {
+    final messageId = const Uuid().v4();
+    
     setState(() {
       _conversationHistory.add({
-        'id': const Uuid().v4(),
+        'id': messageId,
         'message': message,
         'timestamp': DateTime.now(),
         'isUserMessage': isUserMessage,
@@ -168,6 +171,8 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
         );
       }
     });
+
+    return messageId;
   }
 
   void _handleSendMessage() {
@@ -231,6 +236,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
 
   Future<void> _simulateAvatarResponse(String userMessage) async {
     final avatarProvider = context.read<AvatarProvider>();
+    final voiceProvider = context.read<VoiceProvider>();
     final activeConfig = avatarProvider.activeConfiguration;
 
     if (activeConfig == null) {
@@ -257,24 +263,79 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
             frequencyPenalty: 0.7,
           );
 
-      _addToConversation(
+      // Add avatar response to conversation
+      final messageId = _addToConversation(
         message: response,
         isUserMessage: false,
         avatarConfig: activeConfig,
         voiceConfig: activeConfig.voiceConfiguration,
       );
+
+      // Auto-synthesize voice if enabled
+      try {
+        final settingsRepo = SettingsRepositoryImpl();
+        final autoVoiceSynthesis = await settingsRepo.getSetting<bool>('autoVoiceSynthesis') ?? false;
+        
+        if (autoVoiceSynthesis && messageId != null) {
+          // Small delay to ensure UI is updated first
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          final audioId = await voiceProvider.synthesizeAndPlayAudio(response);
+          if (audioId != null && mounted) {
+            setState(() {
+              final index = _conversationHistory.indexWhere(
+                (msg) => msg['id'] == messageId,
+              );
+              if (index != -1) {
+                _conversationHistory[index]['audioId'] = audioId;
+              }
+            });
+          }
+        }
+      } catch (e) {
+        // Ignore auto-synthesis errors to not break the conversation flow
+        print('Auto voice synthesis failed: $e');
+      }
     } catch (e) {
       // Fallback to hard-coded response if API call fails
       final fallbackResponse = _generatePersonalityResponse(
         userMessage,
         activeConfig.personalityType,
       );
-      _addToConversation(
+      
+      // Add fallback response to conversation
+      final messageId = _addToConversation(
         message: fallbackResponse,
         isUserMessage: false,
         avatarConfig: activeConfig,
         voiceConfig: activeConfig.voiceConfiguration,
       );
+
+      // Auto-synthesize voice for fallback response if enabled
+      try {
+        final settingsRepo = SettingsRepositoryImpl();
+        final autoVoiceSynthesis = await settingsRepo.getSetting<bool>('autoVoiceSynthesis') ?? false;
+        
+        if (autoVoiceSynthesis && messageId != null) {
+          // Small delay to ensure UI is updated first
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          final audioId = await voiceProvider.synthesizeAndPlayAudio(fallbackResponse);
+          if (audioId != null && mounted) {
+            setState(() {
+              final index = _conversationHistory.indexWhere(
+                (msg) => msg['id'] == messageId,
+              );
+              if (index != -1) {
+                _conversationHistory[index]['audioId'] = audioId;
+              }
+            });
+          }
+        }
+      } catch (e) {
+        // Ignore auto-synthesis errors to not break the conversation flow
+        print('Auto voice synthesis for fallback failed: $e');
+      }
     }
   }
 
@@ -416,15 +477,34 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
       return;
     }
 
-    if (_conversationHistory.isEmpty ||
-        _conversationHistory.last['isUserMessage'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Vui lòng gửi một tin nhắn trước khi tổng hợp giọng nói',
-          ),
-        ),
+    // Check if there are any avatar messages to synthesize
+    final hasUnsynthesizedAvatarMessages = _conversationHistory.any(
+      (msg) => msg['isUserMessage'] == false && msg['audioId'] == null,
+    );
+    
+    if (!hasUnsynthesizedAvatarMessages) {
+      // Check if there are any avatar messages at all
+      final hasAvatarMessages = _conversationHistory.any(
+        (msg) => msg['isUserMessage'] == false,
       );
+      
+      if (!hasAvatarMessages) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Vui lòng gửi một tin nhắn và chờ phản hồi từ avatar trước khi tổng hợp giọng nói',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Tất cả tin nhắn avatar đã được tổng hợp giọng nói rồi!',
+            ),
+          ),
+        );
+      }
       return;
     }
 
@@ -433,9 +513,9 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     });
 
     try {
-      // Get the last avatar message
+      // Get the last avatar message that hasn't been synthesized yet
       final lastAvatarMessage = _conversationHistory.lastWhere(
-        (msg) => msg['isUserMessage'] == false,
+        (msg) => msg['isUserMessage'] == false && msg['audioId'] == null,
         orElse: () => <String, dynamic>{},
       );
 
@@ -474,6 +554,17 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
               ),
             );
           }
+        }
+      } else {
+        // All avatar messages have already been synthesized
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Tất cả tin nhắn avatar đã được tổng hợp giọng nói rồi!',
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -735,7 +826,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                         onPressed: _isGeneratingVoice
                             ? null
                             : _handleSynthesizeSpeech,
-                        tooltip: 'Tổng hợp giọng nói',
+                        tooltip: 'Tổng hợp giọng nói cho tin nhắn avatar chưa được phát',
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
@@ -769,7 +860,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
 
                 // Instructions
                 Text(
-                  'Nhập tin nhắn và gửi để xem avatar phản hồi. Sử dụng nút tổng hợp giọng nói để phát âm thanh.',
+                  'Nhập tin nhắn và gửi để xem avatar phản hồi. Sử dụng nút tổng hợp giọng nói để phát âm thanh cho tin nhắn avatar chưa được phát.',
                   style: TextStyle(
                     color: Theme.of(
                       context,

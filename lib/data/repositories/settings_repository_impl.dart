@@ -35,6 +35,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
       }
       
       final settingsMap = json.decode(settingsJson) as Map<String, dynamic>;
+      
+      // Handle migration for old settings that don't have new fields
+      if (!settingsMap.containsKey('useWebSpeechFallback')) {
+        settingsMap['useWebSpeechFallback'] = true;
+      }
+      if (!settingsMap.containsKey('autoVoiceSynthesis')) {
+        settingsMap['autoVoiceSynthesis'] = false;
+      }
+      
       return AppSettingsModel.fromJson(settingsMap);
     } catch (e) {
       throw Exception('Failed to load settings: $e');
@@ -64,6 +73,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
               showTutorials: settings.showTutorials,
               lastBackupTime: settings.lastBackupTime,
               appVersion: settings.appVersion,
+              useWebSpeechFallback: settings.useWebSpeechFallback,
+              autoVoiceSynthesis: settings.autoVoiceSynthesis,
             );
 
       final settingsJson = json.encode(settingsModel.toJson());
@@ -149,6 +160,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
         case 'useWebSpeechFallback':
           updatedSettings = currentSettings.copyWith(useWebSpeechFallback: value as bool);
           break;
+        case 'autoVoiceSynthesis':
+          updatedSettings = currentSettings.copyWith(autoVoiceSynthesis: value as bool);
+          break;
         default:
           throw ArgumentError('Unknown setting key: $key');
       }
@@ -199,6 +213,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
           return settings.appVersion as T;
         case 'useWebSpeechFallback':
           return settings.useWebSpeechFallback as T;
+        case 'autoVoiceSynthesis':
+          return settings.autoVoiceSynthesis as T;
         default:
           return null;
       }

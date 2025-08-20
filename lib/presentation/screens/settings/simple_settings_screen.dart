@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../data/models/app_settings_model.dart';
 import '../../../data/repositories/settings_repository_impl.dart';
 import '../../widgets/common/copyable_error_widget.dart';
+import '../../../data/services/api_config_service.dart';
 
 /// Simple settings screen for testing
 class SimpleSettingsScreen extends StatefulWidget {
@@ -234,6 +235,12 @@ class _SimpleSettingsScreenState extends State<SimpleSettingsScreen> {
                     value: _currentSettings!.useWebSpeechFallback,
                     onChanged: (value) => _updateSetting('useWebSpeechFallback', value),
                   ),
+                  SwitchListTile(
+                    title: const Text('Tự động tổng hợp giọng nói'),
+                    subtitle: const Text('Tự động phát âm thanh khi avatar trả lời'),
+                    value: _currentSettings!.autoVoiceSynthesis,
+                    onChanged: (value) => _updateSetting('autoVoiceSynthesis', value),
+                  ),
                 ],
               ),
             ),
@@ -310,6 +317,57 @@ class _SimpleSettingsScreenState extends State<SimpleSettingsScreen> {
                         applicationName: 'Avatar Configuration App',
                         applicationVersion: _currentSettings!.appVersion,
                       );
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('Debug API Keys'),
+                    subtitle: const Text('Kiểm tra trạng thái API keys'),
+                    trailing: const Icon(Icons.bug_report),
+                    onTap: () async {
+                      try {
+                        final debugInfo = await ApiConfigService.debugApiKeys();
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('API Keys Debug Info'),
+                              content: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('Platform: ${debugInfo['platform']}'),
+                                    const SizedBox(height: 8),
+                                    Text('OpenAI Key: ${debugInfo['openai_has_key'] ? '✅ Found' : '❌ Missing'}'),
+                                    if (debugInfo['openai_key_preview'] != null)
+                                      Text('Preview: ${debugInfo['openai_key_preview']}'),
+                                    const SizedBox(height: 8),
+                                    Text('ElevenLabs Key: ${debugInfo['elevenlabs_has_key'] ? '✅ Found' : '❌ Missing'}'),
+                                    if (debugInfo['elevenlabs_key_preview'] != null)
+                                      Text('Preview: ${debugInfo['elevenlabs_key_preview']}'),
+                                    if (debugInfo['error'] != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text('Error: ${debugInfo['error']}', style: const TextStyle(color: Colors.red)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Đóng'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Lỗi debug: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                 ],
