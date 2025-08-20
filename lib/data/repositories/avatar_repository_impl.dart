@@ -1,6 +1,7 @@
 // Real Avatar Repository Implementation with SQLite
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../domain/repositories/avatar_repository.dart';
 import '../../domain/entities/avatar_configuration.dart';
@@ -19,18 +20,18 @@ class AvatarRepositoryImpl implements AvatarRepository {
   @override
   Future<List<AvatarConfiguration>> getAllConfigurations() async {
     try {
-      print('DEBUG: AvatarRepositoryImpl.getAllConfigurations() called');
+      debugPrint('AvatarRepositoryImpl.getAllConfigurations() called');
       final startTime = DateTime.now();
       
       List<Map<String, dynamic>> maps;
       
       if (PlatformUtils.isWeb) {
-        print('DEBUG: Using web storage for query');
+        debugPrint('Using web storage for query');
         maps = await _databaseHelper.webStorage.queryAvatarConfigurations(
           orderBy: 'updated_date DESC',
         );
       } else {
-        print('DEBUG: Using SQLite database for query');
+        debugPrint('Using SQLite database for query');
         final db = await _databaseHelper.database;
         maps = await db.query(
           StorageKeys.avatarConfigurationsTable,
@@ -38,33 +39,33 @@ class AvatarRepositoryImpl implements AvatarRepository {
         );
       }
 
-      print('DEBUG: Found ${maps.length} configurations in database');
-      print('DEBUG: Database query took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Found ${maps.length} configurations in database');
+      debugPrint('Database query took ${DateTime.now().difference(startTime).inMilliseconds}ms');
       
       final conversionStartTime = DateTime.now();
       final result = maps.map((map) {
-        print('DEBUG: Processing configuration map: $map');
+        debugPrint('Processing configuration map: $map');
         try {
           final model = AvatarConfigurationModel.fromMap(map);
-          print('DEBUG: Successfully created model from map');
+          debugPrint('Successfully created model from map');
           final domain = model.toDomain();
-          print('DEBUG: Successfully converted to domain: $domain');
+          debugPrint('Successfully converted to domain: $domain');
           return domain;
         } catch (e, stackTrace) {
-          print('ERROR: Failed to process configuration map: $e');
-          print('ERROR: Stack trace: $stackTrace');
-          print('ERROR: Problematic map: $map');
+          debugPrint('ERROR: Failed to process configuration map: $e');
+          debugPrint('ERROR: Stack trace: $stackTrace');
+          debugPrint('ERROR: Problematic map: $map');
           rethrow;
         }
       }).toList();
       
-      print('DEBUG: Domain conversion took ${DateTime.now().difference(conversionStartTime).inMilliseconds}ms');
-      print('DEBUG: Total getAllConfigurations operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Domain conversion took ${DateTime.now().difference(conversionStartTime).inMilliseconds}ms');
+      debugPrint('Total getAllConfigurations operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
       
       return result;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to load configurations: $e');
-      print('ERROR: Stack trace: $stackTrace');
+      debugPrint('ERROR: Failed to load configurations: $e');
+      debugPrint('ERROR: Stack trace: $stackTrace');
       throw app_exceptions.DatabaseException(
         message: 'Failed to load configurations: $e',
       );
@@ -74,7 +75,7 @@ class AvatarRepositoryImpl implements AvatarRepository {
   @override
   Future<AvatarConfiguration?> getConfigurationById(String id) async {
     try {
-      print('DEBUG: AvatarRepositoryImpl.getConfigurationById() called with id: $id');
+      debugPrint('AvatarRepositoryImpl.getConfigurationById() called with id: $id');
       final startTime = DateTime.now();
       
       List<Map<String, dynamic>> maps;
@@ -95,23 +96,23 @@ class AvatarRepositoryImpl implements AvatarRepository {
         );
       }
 
-      print('DEBUG: Database query took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Database query took ${DateTime.now().difference(startTime).inMilliseconds}ms');
       
       if (maps.isEmpty) {
-        print('DEBUG: No configuration found with id: $id');
+        debugPrint('No configuration found with id: $id');
         return null;
       }
 
-      print('DEBUG: Found configuration with id: $id');
+      debugPrint('Found configuration with id: $id');
       final conversionStartTime = DateTime.now();
       final model = AvatarConfigurationModel.fromMap(maps.first);
       final domain = model.toDomain();
-      print('DEBUG: Domain conversion took ${DateTime.now().difference(conversionStartTime).inMilliseconds}ms');
-      print('DEBUG: Total getConfigurationById operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Domain conversion took ${DateTime.now().difference(conversionStartTime).inMilliseconds}ms');
+      debugPrint('Total getConfigurationById operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
       
       return domain;
     } catch (e) {
-      print('ERROR: Failed to get configuration by ID: $e');
+      debugPrint('ERROR: Failed to get configuration by ID: $e');
       throw app_exceptions.DatabaseException(
         message: 'Failed to get configuration by ID: $e',
       );
@@ -153,18 +154,18 @@ class AvatarRepositoryImpl implements AvatarRepository {
   @override
   Future<void> createConfiguration(AvatarConfiguration configuration) async {
     try {
-      print('DEBUG: AvatarRepositoryImpl.createConfiguration() called with id: ${configuration.id}');
+      debugPrint('AvatarRepositoryImpl.createConfiguration() called with id: ${configuration.id}');
       final startTime = DateTime.now();
       
       // Convert domain entity to model for storage
       final model = AvatarConfigurationModel.fromDomain(configuration);
-      print('DEBUG: Converted domain to model: ${model.name}');
+      debugPrint('Converted domain to model: ${model.name}');
       
       if (PlatformUtils.isWeb) {
-        print('DEBUG: Inserting into web storage');
+        debugPrint('Inserting into web storage');
         await _databaseHelper.webStorage.insertAvatarConfiguration(model.toMap());
       } else {
-        print('DEBUG: Inserting into SQLite database');
+        debugPrint('Inserting into SQLite database');
         final db = await _databaseHelper.database;
         await db.insert(
           StorageKeys.avatarConfigurationsTable,
@@ -173,10 +174,10 @@ class AvatarRepositoryImpl implements AvatarRepository {
         );
       }
       
-      print('DEBUG: Successfully created configuration: ${configuration.id}');
-      print('DEBUG: Total createConfiguration operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Successfully created configuration: ${configuration.id}');
+      debugPrint('Total createConfiguration operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
     } catch (e) {
-      print('ERROR: Failed to create configuration: $e');
+      debugPrint('ERROR: Failed to create configuration: $e');
       throw app_exceptions.DatabaseException(
         message: 'Failed to create configuration: $e',
       );
@@ -186,24 +187,24 @@ class AvatarRepositoryImpl implements AvatarRepository {
   @override
   Future<void> updateConfiguration(AvatarConfiguration configuration) async {
     try {
-      print('DEBUG: AvatarRepositoryImpl.updateConfiguration() called with id: ${configuration.id}');
+      debugPrint('AvatarRepositoryImpl.updateConfiguration() called with id: ${configuration.id}');
       final startTime = DateTime.now();
       
       // Convert domain entity to model
       final model = AvatarConfigurationModel.fromDomain(configuration);
       final updatedModel = model.copyWith(lastModified: DateTime.now());
-      print('DEBUG: Converted domain to model for update: ${updatedModel.name}');
+      debugPrint('Converted domain to model for update: ${updatedModel.name}');
       
       int result;
       if (PlatformUtils.isWeb) {
-        print('DEBUG: Updating web storage');
+        debugPrint('Updating web storage');
         result = await _databaseHelper.webStorage.updateAvatarConfiguration(
           updatedModel.toMap(),
           'id = ?',
           [configuration.id],
         );
       } else {
-        print('DEBUG: Updating SQLite database');
+        debugPrint('Updating SQLite database');
         final db = await _databaseHelper.database;
         result = await db.update(
           StorageKeys.avatarConfigurationsTable,
@@ -213,19 +214,19 @@ class AvatarRepositoryImpl implements AvatarRepository {
         );
       }
 
-      print('DEBUG: Update result: $result rows affected');
+      debugPrint('Update result: $result rows affected');
       
       if (result == 0) {
-        print('ERROR: Configuration not found for update: ${configuration.id}');
+        debugPrint('ERROR: Configuration not found for update: ${configuration.id}');
         throw app_exceptions.DatabaseException(
           message: 'Configuration not found for update: ${configuration.id}',
         );
       }
       
-      print('DEBUG: Successfully updated configuration: ${configuration.id}');
-      print('DEBUG: Total updateConfiguration operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint('Successfully updated configuration: ${configuration.id}');
+      debugPrint('Total updateConfiguration operation took ${DateTime.now().difference(startTime).inMilliseconds}ms');
     } catch (e) {
-      print('ERROR: Failed to update configuration: $e');
+      debugPrint('ERROR: Failed to update configuration: $e');
       throw app_exceptions.DatabaseException(
         message: 'Failed to update configuration: $e',
       );

@@ -344,6 +344,7 @@ class _ConfigurationManagementScreenState extends State<ConfigurationManagementS
       floatingActionButton: _isSelectionMode ? null : ScaleTransition(
         scale: _fabAnimation,
         child: FloatingActionButton.extended(
+          heroTag: "config_management_fab",
           onPressed: _createNewConfiguration,
           icon: const Icon(Icons.add),
           label: const Text('Tạo mới'),

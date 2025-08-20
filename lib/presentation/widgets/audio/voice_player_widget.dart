@@ -218,10 +218,10 @@ class _VoicePlayerWidgetState extends State<VoicePlayerWidget>
       height: widget.height ?? 80,
       padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outline.withOpacity(0.2),
+          color: colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -268,7 +268,7 @@ class _VoicePlayerWidgetState extends State<VoicePlayerWidget>
                     child: Container(
                       height: 4,
                       decoration: BoxDecoration(
-                        color: colorScheme.outline.withOpacity(0.2),
+                        color: colorScheme.outline.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: FractionallySizedBox(

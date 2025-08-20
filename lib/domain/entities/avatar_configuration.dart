@@ -86,19 +86,14 @@ class AvatarConfiguration extends Equatable {
     required VoiceConfiguration voiceConfiguration,
     bool isActive = false,
   }) {
-    print('DEBUG: AvatarConfiguration.createWithString called with personalityTypeStr: $personalityTypeStr');
+    
     
     try {
       // Convert string to PersonalityType enum
       final personalityType = PersonalityType.values.firstWhere(
         (e) => e.name == personalityTypeStr,
-        orElse: () {
-          print('DEBUG: PersonalityType $personalityTypeStr not found, using casual');
-          return PersonalityType.casual;
-        },
+        orElse: () => PersonalityType.casual,
       );
-      
-      print('DEBUG: Successfully converted $personalityTypeStr to $personalityType');
       
       return AvatarConfiguration.create(
         id: id,
@@ -107,9 +102,7 @@ class AvatarConfiguration extends Equatable {
         voiceConfiguration: voiceConfiguration,
         isActive: isActive,
       );
-    } catch (e, stackTrace) {
-      print('ERROR: Failed to convert personality type string: $e');
-      print('ERROR: Stack trace: $stackTrace');
+    } catch (e) {
       // Fallback to casual
       return AvatarConfiguration.create(
         id: id,

@@ -67,7 +67,7 @@ class AvatarService {
   /// Get personality-specific border color
   Color getPersonalityBorderColor(PersonalityType personalityType) {
     final color = getPersonalityColor(personalityType);
-    return color.withOpacity(0.8);
+    return color.withValues(alpha: 0.8);
   }
 
   /// Get personality-specific icon

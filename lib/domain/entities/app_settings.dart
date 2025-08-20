@@ -18,6 +18,7 @@ abstract class AppSettings {
   bool get showTutorials;
   DateTime get lastBackupTime;
   String get appVersion;
+  bool get useWebSpeechFallback;
 
   /// Create a copy with updated values
   AppSettings copyWith({
@@ -37,6 +38,7 @@ abstract class AppSettings {
     bool? showTutorials,
     DateTime? lastBackupTime,
     String? appVersion,
+    bool? useWebSpeechFallback,
   });
 
   /// Convert to JSON representation

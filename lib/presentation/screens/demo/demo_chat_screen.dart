@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +16,14 @@ import '../../../core/network/api_client.dart';
 import '../../../presentation/widgets/audio/voice_chat_widget.dart';
 
 /// Demo chat screen that showcases avatar and voice configuration functionality
+class _SubmitMessageIntent extends Intent { const _SubmitMessageIntent(); }
+class _SubmitMessageAction extends Action<_SubmitMessageIntent> {
+  final VoidCallback onSubmit;
+  _SubmitMessageAction(this.onSubmit);
+  @override
+  Object? invoke(_SubmitMessageIntent intent) { onSubmit(); return null; }
+}
+
 class DemoChatScreen extends StatefulWidget {
   const DemoChatScreen({super.key});
 
@@ -137,11 +146,13 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
 
     // Scroll to bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+      }
     });
   }
 
@@ -515,7 +526,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   }
 
   Widget _buildConversationArea() {
-    return ListView.builder(
+    return ListView.builder(cacheExtent: 1000.0, addRepaintBoundaries: true, addAutomaticKeepAlives: true, 
       controller: _scrollController,
       padding: const EdgeInsets.all(8),
       itemCount: _conversationHistory.length,
@@ -597,6 +608,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
               children: [
                 Row(
                   children: [
+<<<<<<< HEAD
                     Expanded(
                       child: TextField(
                         controller: _messageController,
@@ -621,11 +633,42 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                             horizontal: 20,
                             vertical: 12,
                           ),
+=======
+            Expanded(
+              child: Shortcuts(
+                shortcuts: {
+                  SingleActivator(LogicalKeyboardKey.enter): const _SubmitMessageIntent(),
+                },
+                child: Actions(
+                  actions: {
+                    _SubmitMessageIntent: _SubmitMessageAction(() { _handleSendMessage(); }),
+                  },
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tin nhắn của bạn...',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+>>>>>>> b44a14910c88d5d41dcd8f12724fc96aa9160207
                         ),
-                        onSubmitted: (_) => _handleSendMessage(),
-                        textInputAction: TextInputAction.send,
+                      ),
+                      enabled: !_isGeneratingVoice,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
                       ),
                     ),
+                    onSubmitted: (_) => _handleSendMessage(),
+                    textInputAction: TextInputAction.send,
+                  ),
+                ),
+              ),
+            ),
                     const SizedBox(width: 12),
 
                     // Voice synthesis button

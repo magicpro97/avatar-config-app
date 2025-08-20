@@ -125,6 +125,7 @@ class _ConfigurationDetailsScreenState extends State<ConfigurationDetailsScreen>
       ),
       
       floatingActionButton: _currentConfig.isActive ? null : FloatingActionButton(
+        heroTag: "config_details_activate_fab",
         onPressed: _activateConfiguration,
         tooltip: 'Kích hoạt cấu hình',
         child: const Icon(Icons.play_arrow),

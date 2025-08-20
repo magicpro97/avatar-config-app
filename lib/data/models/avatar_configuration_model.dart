@@ -6,10 +6,12 @@ import '../../domain/entities/voice.dart';
 import 'personality_model.dart' as personality_model;
 import '../../domain/entities/personality.dart' as domain_personality;
 import 'voice_model.dart' as voice_model;
+import 'package:flutter/foundation.dart';
 
 part 'avatar_configuration_model.g.dart';
 
-typedef PersonalityType = personality_model.PersonalityType; // alias for generated code compatibility
+typedef PersonalityType =
+    personality_model.PersonalityType; // alias for generated code compatibility
 typedef PersonalityModel = personality_model.PersonalityModel;
 
 @JsonSerializable()
@@ -262,15 +264,15 @@ class AvatarConfigurationModel {
   /// Create model from database map
   factory AvatarConfigurationModel.fromMap(Map<String, dynamic> map) {
     try {
-      print('DEBUG: AvatarConfigurationModel.fromMap called with map: $map');
+      debugPrint('AvatarConfigurationModel.fromMap called with map: $map');
 
       // Parse personality data with enhanced error handling
       final personalityData =
           jsonDecode(map['personality_data'] as String) as Map<String, dynamic>;
-      print('DEBUG: Parsed personalityData: $personalityData');
+      debugPrint('Parsed personalityData: $personalityData');
 
       final personalityTypeStr = personalityData['type'] as String;
-      print('DEBUG: personalityTypeStr: $personalityTypeStr');
+      debugPrint('personalityTypeStr: $personalityTypeStr');
 
       // Enhanced personality type validation and conversion
       personality_model.PersonalityType personalityType;
@@ -288,12 +290,12 @@ class AvatarConfigurationModel {
         print('ERROR: Failed to resolve personality type: $e');
         personalityType = personality_model.PersonalityType.casual;
       }
-      print('DEBUG: Resolved personalityType: $personalityType');
+      debugPrint('Resolved personalityType: $personalityType');
 
       // Parse voice data
       final voiceData =
           jsonDecode(map['voice_data'] as String) as Map<String, dynamic>;
-      print('DEBUG: Parsed voiceData: $voiceData');
+      debugPrint('Parsed voiceData: $voiceData');
       final voiceConfiguration = voice_model.VoiceConfigurationModel.fromJson(
         voiceData,
       );
@@ -303,7 +305,7 @@ class AvatarConfigurationModel {
       final tags = tagsString?.isNotEmpty == true
           ? tagsString!.split(',').where((tag) => tag.isNotEmpty).toList()
           : <String>[];
-      print('DEBUG: Parsed tags: $tags');
+      debugPrint('Parsed tags: $tags');
 
       final model = AvatarConfigurationModel(
         id: map['id'] as String,
@@ -326,12 +328,14 @@ class AvatarConfigurationModel {
         tags: tags,
       );
 
-      print('DEBUG: Successfully created AvatarConfigurationModel: $model');
+      debugPrint('Successfully created AvatarConfigurationModel: $model');
       return model;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to create AvatarConfigurationModel from map: $e');
-      print('ERROR: Stack trace: $stackTrace');
-      print('ERROR: Map data: $map');
+      debugPrint(
+        'ERROR: Failed to create AvatarConfigurationModel from map: $e',
+      );
+      debugPrint('ERROR: Stack trace: $stackTrace');
+      debugPrint('ERROR: Map data: $map');
       rethrow;
     }
   }
@@ -339,21 +343,21 @@ class AvatarConfigurationModel {
   /// Convert to domain entity using string-based conversion approach
   AvatarConfiguration toDomain() {
     try {
-      print('DEBUG: AvatarConfigurationModel.toDomain() called');
-      print('DEBUG: Model personalityType: $personalityType');
-      print('DEBUG: Model personalityType.name: ${personalityType.name}');
+      debugPrint('AvatarConfigurationModel.toDomain() called');
+      debugPrint('Model personalityType: $personalityType');
+      debugPrint('Model personalityType.name: ${personalityType.name}');
 
       // Use the new string-based conversion method
       final domainVoiceConfig = _convertToEntityVoiceConfiguration(
         voiceConfiguration,
       );
-      print('DEBUG: Converted domain voiceConfiguration: $domainVoiceConfig');
+      debugPrint('Converted domain voiceConfiguration: $domainVoiceConfig');
 
       // Use the string-based conversion to avoid enum type conflicts
       final personalityTypeStr = _convertToEntityPersonalityType(
         personalityType,
       );
-      print('DEBUG: Converted personalityTypeStr: $personalityTypeStr');
+      debugPrint('Converted personalityTypeStr: $personalityTypeStr');
 
       final result = AvatarConfiguration.createFromString(
         id: id,
@@ -363,30 +367,32 @@ class AvatarConfigurationModel {
         isActive: isActive,
       ).copyWith(createdAt: createdAt, lastModified: lastModified);
 
-      print('DEBUG: Successfully created domain entity: $result');
+      debugPrint('Successfully created domain entity: $result');
       return result;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to convert model to domain: $e');
-      print('ERROR: Stack trace: $stackTrace');
+      debugPrint('ERROR: Failed to convert model to domain: $e');
+      debugPrint('ERROR: Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   /// Helper to convert model PersonalityType to entity PersonalityType
-  String _convertToEntityPersonalityType(personality_model.PersonalityType modelType) {
+  String _convertToEntityPersonalityType(
+    personality_model.PersonalityType modelType,
+  ) {
     try {
-      print('DEBUG: _convertToEntityPersonalityType called with: $modelType');
+      debugPrint('_convertToEntityPersonalityType called with: $modelType');
 
       // Map model PersonalityType to domain PersonalityType using string comparison
       // Since we can't import domain entities directly, we'll return the enum name
       // and let the domain layer handle the actual enum creation
-      print('DEBUG: Mapping ${modelType.name} to domain');
+      debugPrint('Mapping ${modelType.name} to domain');
 
       // Return the enum name as a string for the domain layer to handle
       return modelType.name;
     } catch (e, stackTrace) {
-      print('ERROR: Failed to convert personality type: $e');
-      print('ERROR: Stack trace: $stackTrace');
+      debugPrint('ERROR: Failed to convert personality type: $e');
+      debugPrint('ERROR: Stack trace: $stackTrace');
       return 'casual'; // Fallback as string
     }
   }
@@ -396,9 +402,9 @@ class AvatarConfigurationModel {
     voice_model.VoiceConfigurationModel modelVoice,
   ) {
     try {
-      print('DEBUG: Converting VoiceConfigurationModel to VoiceConfiguration');
-      print(
-        'DEBUG: Model voice: ${modelVoice.voiceId}, ${modelVoice.name}, ${modelVoice.gender}',
+      debugPrint('Converting VoiceConfigurationModel to VoiceConfiguration');
+      debugPrint(
+        'Model voice: ${modelVoice.voiceId}, ${modelVoice.name}, ${modelVoice.gender}',
       );
 
       // Convert Gender enum from model to domain
@@ -421,21 +427,21 @@ class AvatarConfigurationModel {
         settings: domainSettings,
       );
 
-      print('DEBUG: Successfully converted to domain: $result');
+      debugPrint('Successfully converted to domain: $result');
       return result;
     } catch (e, stackTrace) {
-      print(
+      debugPrint(
         'ERROR: Failed to convert VoiceConfigurationModel to VoiceConfiguration: $e',
       );
-      print('ERROR: Stack trace: $stackTrace');
-      print('ERROR: Model voice data: $modelVoice');
+      debugPrint('ERROR: Stack trace: $stackTrace');
+      debugPrint('ERROR: Model voice data: $modelVoice');
       rethrow;
     }
   }
 
   /// Convert model Gender to domain Gender
   Gender _convertGenderToDomain(dynamic modelGender) {
-    print('DEBUG: Converting gender from model to domain: $modelGender');
+    debugPrint('Converting gender from model to domain: $modelGender');
     // Handle both enum and string values
     if (modelGender is String) {
       switch (modelGender.toLowerCase()) {
@@ -546,12 +552,12 @@ class AvatarConfigurationModel {
         settings: _convertVoiceSettings(entityVoice.settings),
       );
     }
-    
+
     // If it's already a model, return as is
     if (entityVoice is voice_model.VoiceConfigurationModel) {
       return entityVoice;
     }
-    
+
     // Default fallback voice configuration
     return voice_model.VoiceConfigurationModel(
       voiceId: 'default_voice',
@@ -576,7 +582,9 @@ class AvatarConfigurationModel {
   }
 
   /// Helper to convert VoiceSettings
-  static voice_model.VoiceSettingsModel _convertVoiceSettings(VoiceSettings domainSettings) {
+  static voice_model.VoiceSettingsModel _convertVoiceSettings(
+    VoiceSettings domainSettings,
+  ) {
     return voice_model.VoiceSettingsModel(
       stability: domainSettings.stability,
       similarityBoost: domainSettings.similarityBoost,
