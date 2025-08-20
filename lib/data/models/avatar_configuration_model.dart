@@ -3,10 +3,14 @@ import 'package:json_annotation/json_annotation.dart';
 import 'dart:convert';
 import '../../domain/entities/avatar_configuration.dart';
 import '../../domain/entities/voice.dart';
-import 'personality_model.dart';
+import 'personality_model.dart' as personality_model;
+import '../../domain/entities/personality.dart' as domain_personality;
 import 'voice_model.dart' as voice_model;
 
 part 'avatar_configuration_model.g.dart';
+
+typedef PersonalityType = personality_model.PersonalityType; // alias for generated code compatibility
+typedef PersonalityModel = personality_model.PersonalityModel;
 
 @JsonSerializable()
 class AvatarConfigurationModel {
@@ -14,7 +18,7 @@ class AvatarConfigurationModel {
   final String name;
   final String? description;
   @JsonKey(name: 'personality_type')
-  final PersonalityType personalityType;
+  final personality_model.PersonalityType personalityType;
   @JsonKey(name: 'voice_configuration')
   final voice_model.VoiceConfigurationModel voiceConfiguration;
   @JsonKey(name: 'created_at')
@@ -93,7 +97,7 @@ class AvatarConfigurationModel {
     String? id,
     String? name,
     String? description,
-    PersonalityType? personalityType,
+    personality_model.PersonalityType? personalityType,
     voice_model.VoiceConfigurationModel? voiceConfiguration,
     DateTime? createdAt,
     DateTime? lastModified,
@@ -179,24 +183,24 @@ class AvatarConfigurationModel {
   }
 
   // Helper getters
-  PersonalityModel get personality {
+  personality_model.PersonalityModel get personality {
     switch (personalityType) {
-      case PersonalityType.happy:
-        return PersonalityModel.happy;
-      case PersonalityType.romantic:
-        return PersonalityModel.romantic;
-      case PersonalityType.funny:
-        return PersonalityModel.funny;
-      case PersonalityType.professional:
-        return PersonalityModel.professional;
-      case PersonalityType.casual:
-        return PersonalityModel.casual;
-      case PersonalityType.energetic:
-        return PersonalityModel.energetic;
-      case PersonalityType.calm:
-        return PersonalityModel.calm;
-      case PersonalityType.mysterious:
-        return PersonalityModel.mysterious;
+      case personality_model.PersonalityType.happy:
+        return personality_model.PersonalityModel.happy;
+      case personality_model.PersonalityType.romantic:
+        return personality_model.PersonalityModel.romantic;
+      case personality_model.PersonalityType.funny:
+        return personality_model.PersonalityModel.funny;
+      case personality_model.PersonalityType.professional:
+        return personality_model.PersonalityModel.professional;
+      case personality_model.PersonalityType.casual:
+        return personality_model.PersonalityModel.casual;
+      case personality_model.PersonalityType.energetic:
+        return personality_model.PersonalityModel.energetic;
+      case personality_model.PersonalityType.calm:
+        return personality_model.PersonalityModel.calm;
+      case personality_model.PersonalityType.mysterious:
+        return personality_model.PersonalityModel.mysterious;
     }
   }
 
@@ -269,20 +273,20 @@ class AvatarConfigurationModel {
       print('DEBUG: personalityTypeStr: $personalityTypeStr');
 
       // Enhanced personality type validation and conversion
-      PersonalityType personalityType;
+      personality_model.PersonalityType personalityType;
       try {
-        personalityType = PersonalityType.values.firstWhere(
+        personalityType = personality_model.PersonalityType.values.firstWhere(
           (e) => e.name == personalityTypeStr,
           orElse: () {
             print(
               'WARNING: PersonalityType $personalityTypeStr not found, using casual',
             );
-            return PersonalityType.casual;
+            return personality_model.PersonalityType.casual;
           },
         );
       } catch (e) {
         print('ERROR: Failed to resolve personality type: $e');
-        personalityType = PersonalityType.casual;
+        personalityType = personality_model.PersonalityType.casual;
       }
       print('DEBUG: Resolved personalityType: $personalityType');
 
@@ -369,7 +373,7 @@ class AvatarConfigurationModel {
   }
 
   /// Helper to convert model PersonalityType to entity PersonalityType
-  String _convertToEntityPersonalityType(PersonalityType modelType) {
+  String _convertToEntityPersonalityType(personality_model.PersonalityType modelType) {
     try {
       print('DEBUG: _convertToEntityPersonalityType called with: $modelType');
 
@@ -474,23 +478,110 @@ class AvatarConfigurationModel {
   }
 
   /// Helper to convert entity PersonalityType to model PersonalityType
-  static PersonalityType _convertFromEntityPersonalityType(dynamic entityType) {
-    // Simplified conversion - assuming same enum structure
-    return PersonalityType.casual; // Default for now
+  static personality_model.PersonalityType _convertFromEntityPersonalityType(
+    dynamic entityType,
+  ) {
+    // Convert from domain PersonalityType to model PersonalityType
+    if (entityType is domain_personality.PersonalityType) {
+      switch (entityType) {
+        case domain_personality.PersonalityType.happy:
+          return personality_model.PersonalityType.happy;
+        case domain_personality.PersonalityType.romantic:
+          return personality_model.PersonalityType.romantic;
+        case domain_personality.PersonalityType.funny:
+          return personality_model.PersonalityType.funny;
+        case domain_personality.PersonalityType.professional:
+          return personality_model.PersonalityType.professional;
+        case domain_personality.PersonalityType.casual:
+          return personality_model.PersonalityType.casual;
+        case domain_personality.PersonalityType.energetic:
+          return personality_model.PersonalityType.energetic;
+        case domain_personality.PersonalityType.calm:
+          return personality_model.PersonalityType.calm;
+        case domain_personality.PersonalityType.mysterious:
+          return personality_model.PersonalityType.mysterious;
+      }
+    }
+
+    // If it's a string, parse it
+    if (entityType is String) {
+      switch (entityType.toLowerCase()) {
+        case 'happy':
+          return personality_model.PersonalityType.happy;
+        case 'romantic':
+          return personality_model.PersonalityType.romantic;
+        case 'funny':
+          return personality_model.PersonalityType.funny;
+        case 'professional':
+          return personality_model.PersonalityType.professional;
+        case 'casual':
+          return personality_model.PersonalityType.casual;
+        case 'energetic':
+          return personality_model.PersonalityType.energetic;
+        case 'calm':
+          return personality_model.PersonalityType.calm;
+        case 'mysterious':
+          return personality_model.PersonalityType.mysterious;
+        default:
+          return personality_model.PersonalityType.casual;
+      }
+    }
+
+    // Default fallback
+    return personality_model.PersonalityType.casual;
   }
 
   /// Helper to convert entity VoiceConfiguration to model VoiceConfiguration
   static voice_model.VoiceConfigurationModel
   _convertFromEntityVoiceConfiguration(dynamic entityVoice) {
-    // Simplified conversion - you'd want proper mapping here
-    // Return a default voice configuration
+    // Convert from domain VoiceConfiguration to model VoiceConfiguration
+    if (entityVoice is VoiceConfiguration) {
+      // Convert domain entity to model
+      return voice_model.VoiceConfigurationModel(
+        voiceId: entityVoice.voiceId,
+        name: entityVoice.name,
+        gender: _convertGender(entityVoice.gender),
+        language: entityVoice.language,
+        accent: entityVoice.accent,
+        settings: _convertVoiceSettings(entityVoice.settings),
+      );
+    }
+    
+    // If it's already a model, return as is
+    if (entityVoice is voice_model.VoiceConfigurationModel) {
+      return entityVoice;
+    }
+    
+    // Default fallback voice configuration
     return voice_model.VoiceConfigurationModel(
-      voiceId: 'default',
+      voiceId: 'default_voice',
       name: 'Default Voice',
       gender: voice_model.Gender.neutral,
-      language: 'English',
-      accent: 'American',
+      language: 'Vietnamese',
+      accent: 'Northern',
       settings: voice_model.VoiceSettingsModel.defaultSettings,
+    );
+  }
+
+  /// Helper to convert Gender enum
+  static voice_model.Gender _convertGender(Gender domainGender) {
+    switch (domainGender) {
+      case Gender.male:
+        return voice_model.Gender.male;
+      case Gender.female:
+        return voice_model.Gender.female;
+      case Gender.neutral:
+        return voice_model.Gender.neutral;
+    }
+  }
+
+  /// Helper to convert VoiceSettings
+  static voice_model.VoiceSettingsModel _convertVoiceSettings(VoiceSettings domainSettings) {
+    return voice_model.VoiceSettingsModel(
+      stability: domainSettings.stability,
+      similarityBoost: domainSettings.similarityBoost,
+      style: domainSettings.style,
+      useSpeakerBoost: domainSettings.useSpeakerBoost,
     );
   }
 

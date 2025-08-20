@@ -11,8 +11,10 @@ import '../../widgets/batch_operations_bar.dart';
 import '../../dialogs/confirmation_dialog.dart';
 import '../../../domain/entities/avatar_configuration.dart';
 import '../../../data/models/avatar_configuration_model.dart';
-import '../../../data/models/personality_model.dart';
-import '../../../data/models/voice_model.dart';
+import '../../../data/models/personality_model.dart' as personality_model;
+import '../../../data/models/voice_model.dart' as voice_model;
+import '../../../domain/entities/personality.dart' as domain_personality;
+import '../../../domain/entities/voice.dart' as domain_voice;
 import '../../../data/services/backup_service.dart';
 import '../../../core/utils/platform_utils.dart';
 import 'configuration_details_screen.dart';
@@ -1333,22 +1335,54 @@ class _ConfigurationManagementScreenState extends State<ConfigurationManagementS
     );
   }
 
-  PersonalityType _convertPersonalityType(dynamic entityPersonalityType) {
-    // For now, return a default personality type
-    // In a full implementation, you'd have proper type mapping
-    return PersonalityType.casual;
+  personality_model.PersonalityType _convertPersonalityType(
+      domain_personality.PersonalityType entityPersonalityType) {
+    switch (entityPersonalityType) {
+      case domain_personality.PersonalityType.happy:
+        return personality_model.PersonalityType.happy;
+      case domain_personality.PersonalityType.romantic:
+        return personality_model.PersonalityType.romantic;
+      case domain_personality.PersonalityType.funny:
+        return personality_model.PersonalityType.funny;
+      case domain_personality.PersonalityType.professional:
+        return personality_model.PersonalityType.professional;
+      case domain_personality.PersonalityType.casual:
+        return personality_model.PersonalityType.casual;
+      case domain_personality.PersonalityType.energetic:
+        return personality_model.PersonalityType.energetic;
+      case domain_personality.PersonalityType.calm:
+        return personality_model.PersonalityType.calm;
+      case domain_personality.PersonalityType.mysterious:
+        return personality_model.PersonalityType.mysterious;
+    }
   }
 
-  VoiceConfigurationModel _convertVoiceConfiguration(dynamic entityVoiceConfig) {
-    // For now, return a default voice configuration
-    // In a full implementation, you'd have proper type mapping
-    return const VoiceConfigurationModel(
-      voiceId: 'default',
-      name: 'Default Voice',
-      gender: Gender.neutral,
-      language: 'Vietnamese',
-      accent: 'Northern',
-      settings: VoiceSettingsModel.defaultSettings,
+  voice_model.VoiceConfigurationModel _convertVoiceConfiguration(
+      domain_voice.VoiceConfiguration entityVoiceConfig) {
+    voice_model.Gender toModelGender(domain_voice.Gender g) {
+      switch (g) {
+        case domain_voice.Gender.male:
+          return voice_model.Gender.male;
+        case domain_voice.Gender.female:
+          return voice_model.Gender.female;
+        case domain_voice.Gender.neutral:
+          return voice_model.Gender.neutral;
+      }
+      throw StateError('Unknown gender: $g');
+    }
+
+    return voice_model.VoiceConfigurationModel(
+      voiceId: entityVoiceConfig.voiceId,
+      name: entityVoiceConfig.name,
+      gender: toModelGender(entityVoiceConfig.gender),
+      language: entityVoiceConfig.language,
+      accent: entityVoiceConfig.accent,
+      settings: voice_model.VoiceSettingsModel(
+        stability: entityVoiceConfig.settings.stability,
+        similarityBoost: entityVoiceConfig.settings.similarityBoost,
+        style: entityVoiceConfig.settings.style,
+        useSpeakerBoost: entityVoiceConfig.settings.useSpeakerBoost,
+      ),
     );
   }
 

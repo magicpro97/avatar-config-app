@@ -221,21 +221,89 @@ class _PersonalitySelectionScreenState extends State<PersonalitySelectionScreen>
             ),
 
             // Results count and view toggle
-            if (_searchQuery.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  if (_searchQuery.isNotEmpty)
                     Text(
                       '${_filteredPersonalities.length} kết quả',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const Spacer(),
-                  ],
-                ),
+                  const Spacer(),
+                  
+                  // View toggle buttons
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Grid view button
+                        InkWell(
+                          onTap: () => setState(() => _isGridView = true),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomLeft: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _isGridView
+                                  ? colorScheme.primary
+                                  : Colors.transparent,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                bottomLeft: Radius.circular(8),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.grid_view,
+                              size: 20,
+                              color: _isGridView
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        
+                        // List view button
+                        InkWell(
+                          onTap: () => setState(() => _isGridView = false),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: !_isGridView
+                                  ? colorScheme.primary
+                                  : Colors.transparent,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(8),
+                                bottomRight: Radius.circular(8),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.view_list,
+                              size: 20,
+                              color: !_isGridView
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
 
             const SizedBox(height: 8),
 
@@ -245,35 +313,57 @@ class _PersonalitySelectionScreenState extends State<PersonalitySelectionScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.getPersonalityColor(_selectedPersonality!.type.name)
-                      .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.getPersonalityColor(_selectedPersonality!.type.name).withOpacity(0.15),
+                      AppColors.getPersonalityColor(_selectedPersonality!.type.name).withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: AppColors.getPersonalityColor(_selectedPersonality!.type.name),
-                    width: 1,
+                    width: 2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.getPersonalityColor(_selectedPersonality!.type.name).withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: AppColors.getPersonalityColor(_selectedPersonality!.type.name),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.getPersonalityColor(_selectedPersonality!.type.name).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: AppColors.getPersonalityColor(_selectedPersonality!.type.name),
+                        size: 24,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Đã chọn: ${_selectedPersonality!.displayName}',
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppColors.getPersonalityColor(_selectedPersonality!.type.name),
                             ),
                           ),
+                          const SizedBox(height: 4),
                           Text(
                             _getVietnameseDescription(_selectedPersonality!.type),
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
                             maxLines: 2,
@@ -281,6 +371,14 @@ class _PersonalitySelectionScreenState extends State<PersonalitySelectionScreen>
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _selectedPersonality = null),
+                      icon: Icon(
+                        Icons.close,
+                        color: AppColors.getPersonalityColor(_selectedPersonality!.type.name),
+                      ),
+                      tooltip: 'Bỏ chọn',
                     ),
                   ],
                 ),
@@ -344,9 +442,9 @@ class _PersonalitySelectionScreenState extends State<PersonalitySelectionScreen>
         padding: const EdgeInsets.only(bottom: 16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.85,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          childAspectRatio: 0.75, // Làm cho các ô cao hơn một chút
+          crossAxisSpacing: 8,     // Giảm khoảng cách giữa các cột
+          mainAxisSpacing: 8,      // Giảm khoảng cách giữa các hàng
         ),
         itemCount: _filteredPersonalities.length,
         itemBuilder: (context, index) {

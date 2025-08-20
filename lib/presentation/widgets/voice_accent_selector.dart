@@ -247,7 +247,7 @@ class CompactVoiceAccentSelector extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String?>(
-            value: selectedAccent,
+            initialValue: selectedAccent,
             hint: Text(hint ?? 'Chọn giọng địa phương'),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(

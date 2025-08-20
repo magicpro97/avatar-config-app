@@ -31,31 +31,32 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late AudioPlayer _audioPlayer;
-  
+
   // Voice preview state
-  String _previewText = 'Xin chào, tôi là avatar của bạn. Tôi có thể nói tiếng Việt và tiếng Anh rất tự nhiên.';
+  String _previewText =
+      'Xin chào, tôi là avatar của bạn. Tôi có thể nói tiếng Việt và tiếng Anh rất tự nhiên.';
   bool _isPlaying = false;
   bool _isPaused = false;
   double _playbackSpeed = 1.0;
   double _volume = 1.0;
-  
+
   // Extended voice parameters for more control
   double _pitch = 1.0;
   double _speed = 1.0;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _audioPlayer = AudioPlayer();
-    
+
     // Initialize voice provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final voiceProvider = Provider.of<VoiceProvider>(context, listen: false);
       if (voiceProvider.loadingState == VoiceLoadingState.initial) {
         voiceProvider.loadAvailableVoices();
       }
-      
+
       // Set initial voice if provided
       if (widget.initialVoice != null) {
         final voice = voiceProvider.getVoiceById(widget.initialVoice!.voiceId);
@@ -64,7 +65,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
         }
       }
     });
-    
+
     // Listen to audio player events
     _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
       if (mounted) {
@@ -87,8 +88,10 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Scaffold(
+      // Thêm resizeToAvoidBottomInset để xử lý overflow
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Chọn giọng nói'),
         elevation: 0,
@@ -99,8 +102,8 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           Consumer<VoiceProvider>(
             builder: (context, voiceProvider, child) {
               return IconButton(
-                onPressed: voiceProvider.isLoading 
-                    ? null 
+                onPressed: voiceProvider.isLoading
+                    ? null
                     : () => voiceProvider.refresh(),
                 icon: voiceProvider.isLoading
                     ? SizedBox(
@@ -116,7 +119,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
               );
             },
           ),
-          
+
           // Help/Info
           IconButton(
             onPressed: _showHelpDialog,
@@ -130,36 +133,27 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           unselectedLabelColor: colorScheme.onSurface.withValues(alpha: 0.6),
           indicatorColor: colorScheme.primary,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.record_voice_over),
-              text: 'Chọn giọng',
-            ),
-            Tab(
-              icon: Icon(Icons.tune),
-              text: 'Điều chỉnh',
-            ),
-            Tab(
-              icon: Icon(Icons.play_arrow),
-              text: 'Thử nghiệm',
-            ),
+            Tab(icon: Icon(Icons.record_voice_over), text: 'Chọn giọng'),
+            Tab(icon: Icon(Icons.tune), text: 'Điều chỉnh'),
+            Tab(icon: Icon(Icons.play_arrow), text: 'Thử nghiệm'),
           ],
         ),
       ),
-      
+
       body: TabBarView(
         controller: _tabController,
         children: [
           // Tab 1: Voice Selection
           _buildVoiceSelectionTab(),
-          
+
           // Tab 2: Voice Parameters
           _buildVoiceParametersTab(),
-          
+
           // Tab 3: Voice Preview
           _buildVoicePreviewTab(),
         ],
       ),
-      
+
       // Bottom action bar
       bottomNavigationBar: _buildBottomActionBar(),
     );
@@ -169,40 +163,55 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     return Consumer<VoiceProvider>(
       builder: (context, voiceProvider, child) {
         if (voiceProvider.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (voiceProvider.hasError) {
           return _buildErrorState(voiceProvider.errorMessage!);
         }
-        
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Search bar
-              _buildSearchBar(voiceProvider),
-              
-              const SizedBox(height: 16),
-              
-              // Filters
-              _buildFiltersSection(voiceProvider),
-              
-              const SizedBox(height: 16),
-              
-              // Voice statistics
-              if (voiceProvider.hasVoices)
-                _buildVoiceStats(voiceProvider),
-              
-              const SizedBox(height: 16),
-              
-              // Voice list
-              _buildVoiceList(voiceProvider),
-            ],
-          ),
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return ScrollConfiguration(
+              behavior: ScrollConfiguration.of(
+                context,
+              ).copyWith(scrollbars: false),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 32, // Trừ padding
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Search bar
+                      _buildSearchBar(voiceProvider),
+
+                      const SizedBox(height: 16),
+
+                      // Filters
+                      _buildFiltersSection(voiceProvider),
+
+                      const SizedBox(height: 16),
+
+                      // Voice statistics
+                      if (voiceProvider.hasVoices)
+                        _buildVoiceStats(voiceProvider),
+
+                      const SizedBox(height: 16),
+
+                      // Voice list
+                      _buildVoiceList(voiceProvider),
+
+                      // Thêm padding bottom để tránh overflow
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -211,7 +220,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   Widget _buildSearchBar(VoiceProvider voiceProvider) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -243,57 +252,98 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     );
   }
 
+  /// Xây dựng phần filters với xử lý overflow tốt hơn
+  /// Sửa lỗi "Bottom overflowed by X pixel" khi dropdown mở ra
   Widget _buildFiltersSection(VoiceProvider voiceProvider) {
-    return Column(
-      children: [
-        // Gender selector
-        CompactVoiceGenderSelector(
-          selectedGender: voiceProvider.genderFilter,
-          onGenderChanged: voiceProvider.filterByGender,
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Language and accent selectors
-        Row(
-          children: [
-            Expanded(
-              child: CompactVoiceLanguageSelector(
-                availableLanguages: voiceProvider.getAvailableLanguages(),
-                selectedLanguage: voiceProvider.languageFilter,
-                onLanguageChanged: voiceProvider.filterByLanguage,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: CompactVoiceAccentSelector(
-                availableAccents: voiceProvider.languageFilter != null
-                    ? voiceProvider.getAvailableAccents(voiceProvider.languageFilter!)
-                    : [],
-                selectedAccent: voiceProvider.accentFilter,
-                onAccentChanged: voiceProvider.filterByAccent,
-              ),
-            ),
-          ],
-        ),
-      ],
+    return Container(
+      // Thêm constraints để tránh overflow
+      constraints: const BoxConstraints(
+        minHeight: 0,
+        maxHeight: double.infinity,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Gender selector
+          CompactVoiceGenderSelector(
+            selectedGender: voiceProvider.genderFilter,
+            onGenderChanged: voiceProvider.filterByGender,
+          ),
+
+          const SizedBox(height: 12),
+
+          // Language and accent selectors
+          // Sử dụng LayoutBuilder để xử lý overflow khi màn hình nhỏ
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 600) {
+                // Màn hình nhỏ: xếp dọc
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CompactVoiceLanguageSelector(
+                      availableLanguages: voiceProvider.getAvailableLanguages(),
+                      selectedLanguage: voiceProvider.languageFilter,
+                      onLanguageChanged: voiceProvider.filterByLanguage,
+                    ),
+                    const SizedBox(height: 12),
+                    CompactVoiceAccentSelector(
+                      availableAccents: voiceProvider.languageFilter != null
+                          ? voiceProvider.getAvailableAccents(
+                              voiceProvider.languageFilter!,
+                            )
+                          : [],
+                      selectedAccent: voiceProvider.accentFilter,
+                      onAccentChanged: voiceProvider.filterByAccent,
+                    ),
+                  ],
+                );
+              } else {
+                // Màn hình lớn: xếp ngang
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: CompactVoiceLanguageSelector(
+                        availableLanguages: voiceProvider
+                            .getAvailableLanguages(),
+                        selectedLanguage: voiceProvider.languageFilter,
+                        onLanguageChanged: voiceProvider.filterByLanguage,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CompactVoiceAccentSelector(
+                        availableAccents: voiceProvider.languageFilter != null
+                            ? voiceProvider.getAvailableAccents(
+                                voiceProvider.languageFilter!,
+                              )
+                            : [],
+                        selectedAccent: voiceProvider.accentFilter,
+                        onAccentChanged: voiceProvider.filterByAccent,
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildVoiceStats(VoiceProvider voiceProvider) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       color: colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(
-              Icons.analytics,
-              color: colorScheme.primary,
-            ),
+            Icon(Icons.analytics, color: colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -313,7 +363,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                 ],
               ),
             ),
-            if (voiceProvider.searchQuery.isNotEmpty || 
+            if (voiceProvider.searchQuery.isNotEmpty ||
                 voiceProvider.genderFilter != null ||
                 voiceProvider.languageFilter != null ||
                 voiceProvider.accentFilter != null)
@@ -332,54 +382,59 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     if (voiceProvider.filteredVoices.isEmpty) {
       return _buildEmptyState();
     }
-    
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: voiceProvider.filteredVoices.length,
       itemBuilder: (context, index) {
         final voice = voiceProvider.filteredVoices[index];
-        final isSelected = voiceProvider.selectedVoice?.voiceId == voice.voiceId;
-        
+        final isSelected =
+            voiceProvider.selectedVoice?.voiceId == voice.voiceId;
+
         return _buildVoiceCard(voice, isSelected, voiceProvider);
       },
     );
   }
 
-  Widget _buildVoiceCard(ElevenLabsVoice voice, bool isSelected, VoiceProvider voiceProvider) {
+  Widget _buildVoiceCard(
+    ElevenLabsVoice voice,
+    bool isSelected,
+    VoiceProvider voiceProvider,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isSelected 
-          ? colorScheme.primaryContainer.withValues(alpha: 0.3) 
+      color: isSelected
+          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
           : null,
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: isSelected 
-              ? colorScheme.primary 
+          backgroundColor: isSelected
+              ? colorScheme.primary
               : colorScheme.surfaceContainerHighest,
           child: Icon(
-            voice.gender == Gender.male 
-                ? Icons.male 
-                : voice.gender == Gender.female 
-                    ? Icons.female 
-                    : Icons.person,
-            color: isSelected 
-                ? colorScheme.onPrimary 
+            voice.gender == Gender.male
+                ? Icons.male
+                : voice.gender == Gender.female
+                ? Icons.female
+                : Icons.person,
+            color: isSelected
+                ? colorScheme.onPrimary
                 : colorScheme.onSurfaceVariant,
           ),
         ),
-        
+
         title: Text(
           voice.name,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
-        
+
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -408,7 +463,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             ],
           ],
         ),
-        
+
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -419,16 +474,13 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                 icon: const Icon(Icons.play_circle_outline),
                 tooltip: 'Nghe thử',
               ),
-            
+
             // Selection indicator
             if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: colorScheme.primary,
-              ),
+              Icon(Icons.check_circle, color: colorScheme.primary),
           ],
         ),
-        
+
         onTap: () => voiceProvider.selectVoice(voice),
       ),
     );
@@ -440,9 +492,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
         if (voiceProvider.selectedVoice == null) {
           return _buildNoVoiceSelectedState();
         }
-        
+
         final settings = voiceProvider.currentSettings;
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -450,9 +502,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             children: [
               // Selected voice info
               _buildSelectedVoiceInfo(voiceProvider.selectedVoice!),
-              
+
               const SizedBox(height: 24),
-              
+
               // ElevenLabs parameters
               VoiceStabilitySlider(
                 value: settings.stability,
@@ -461,9 +513,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   voiceProvider,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               VoiceSimilarityBoostSlider(
                 value: settings.similarityBoost,
                 onChanged: (value) => _updateVoiceSettings(
@@ -471,9 +523,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   voiceProvider,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               VoiceStyleSlider(
                 value: settings.style,
                 onChanged: (value) => _updateVoiceSettings(
@@ -481,36 +533,36 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   voiceProvider,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Additional parameters
               VoicePitchSlider(
                 value: _pitch,
                 onChanged: (value) => setState(() => _pitch = value),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               VoiceSpeedSlider(
                 value: _speed,
                 onChanged: (value) => setState(() => _speed = value),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               VoiceVolumeSlider(
                 value: _volume,
                 onChanged: (value) => setState(() => _volume = value),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Speaker boost toggle
               _buildSpeakerBoostToggle(settings, voiceProvider),
-              
+
               const SizedBox(height: 16),
-              
+
               // Reset to defaults button
               _buildResetButton(voiceProvider),
             ],
@@ -523,7 +575,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   Widget _buildSelectedVoiceInfo(ElevenLabsVoice voice) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       color: colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: Padding(
@@ -533,11 +585,11 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             CircleAvatar(
               backgroundColor: colorScheme.primary,
               child: Icon(
-                voice.gender == Gender.male 
-                    ? Icons.male 
-                    : voice.gender == Gender.female 
-                        ? Icons.female 
-                        : Icons.person,
+                voice.gender == Gender.male
+                    ? Icons.male
+                    : voice.gender == Gender.female
+                    ? Icons.female
+                    : Icons.person,
                 color: colorScheme.onPrimary,
               ),
             ),
@@ -566,22 +618,27 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     );
   }
 
-  Widget _buildSpeakerBoostToggle(VoiceSettings settings, VoiceProvider voiceProvider) {
+  Widget _buildSpeakerBoostToggle(
+    VoiceSettings settings,
+    VoiceProvider voiceProvider,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       elevation: 0,
       color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       child: SwitchListTile(
         title: const Text('Tăng cường chất lượng giọng (Speaker Boost)'),
-        subtitle: const Text('Cải thiện chất lượng âm thanh nhưng có thể tăng độ trễ'),
+        subtitle: const Text(
+          'Cải thiện chất lượng âm thanh nhưng có thể tăng độ trễ',
+        ),
         value: settings.useSpeakerBoost,
         onChanged: (value) => _updateVoiceSettings(
           settings.copyWith(useSpeakerBoost: value),
           voiceProvider,
         ),
-        activeColor: colorScheme.primary,
+        activeThumbColor: colorScheme.primary,
       ),
     );
   }
@@ -603,7 +660,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
         if (voiceProvider.selectedVoice == null) {
           return _buildNoVoiceSelectedState();
         }
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -611,19 +668,19 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             children: [
               // Selected voice info
               _buildSelectedVoiceInfo(voiceProvider.selectedVoice!),
-              
+
               const SizedBox(height: 24),
-              
+
               // Preview text input
               _buildPreviewTextInput(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Audio controls
               _buildAudioControls(voiceProvider),
-              
+
               const SizedBox(height: 24),
-              
+
               // Quick test phrases
               _buildQuickTestPhrases(),
             ],
@@ -636,7 +693,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   Widget _buildPreviewTextInput() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -658,7 +715,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                fillColor: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
               ),
               onChanged: (value) => setState(() => _previewText = value),
               controller: TextEditingController(text: _previewText),
@@ -679,7 +738,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   Widget _buildAudioControls(VoiceProvider voiceProvider) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -691,40 +750,44 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
               children: [
                 // Play/Pause button
                 ElevatedButton.icon(
-                  onPressed: _previewText.trim().isEmpty 
-                      ? null 
+                  onPressed: _previewText.trim().isEmpty
+                      ? null
                       : () => _playVoiceSynthesis(voiceProvider),
-                  icon: Icon(_isPlaying 
-                      ? Icons.pause 
-                      : _isPaused 
-                          ? Icons.play_arrow 
-                          : Icons.play_arrow),
-                  label: Text(_isPlaying 
-                      ? 'Tạm dừng' 
-                      : _isPaused 
-                          ? 'Tiếp tục' 
-                          : 'Phát'),
+                  icon: Icon(
+                    _isPlaying
+                        ? Icons.pause
+                        : _isPaused
+                        ? Icons.play_arrow
+                        : Icons.play_arrow,
+                  ),
+                  label: Text(
+                    _isPlaying
+                        ? 'Tạm dừng'
+                        : _isPaused
+                        ? 'Tiếp tục'
+                        : 'Phát',
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                   ),
                 ),
-                
+
                 // Stop button
                 ElevatedButton.icon(
-                  onPressed: _isPlaying || _isPaused 
-                      ? _stopAudio 
-                      : null,
+                  onPressed: _isPlaying || _isPaused ? _stopAudio : null,
                   icon: const Icon(Icons.stop),
                   label: const Text('Dừng'),
                 ),
-                
+
                 // Generate button
                 ElevatedButton.icon(
-                  onPressed: voiceProvider.isSynthesizing || _previewText.trim().isEmpty
+                  onPressed:
+                      voiceProvider.isSynthesizing ||
+                          _previewText.trim().isEmpty
                       ? null
                       : () => _generateVoice(voiceProvider),
-                  icon: voiceProvider.isSynthesizing 
+                  icon: voiceProvider.isSynthesizing
                       ? SizedBox(
                           width: 16,
                           height: 16,
@@ -738,9 +801,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Playback controls
             Row(
               children: [
@@ -757,7 +820,8 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                     max: 2.0,
                     divisions: 6,
                     label: '${_playbackSpeed.toStringAsFixed(1)}x',
-                    onChanged: (value) => setState(() => _playbackSpeed = value),
+                    onChanged: (value) =>
+                        setState(() => _playbackSpeed = value),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -794,7 +858,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
       'How can I help you today?',
       'Thank you for using our service.',
     ];
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -803,9 +867,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           children: [
             Text(
               'Câu thử nghiệm nhanh',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -863,7 +927,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                 ),
                 const SizedBox(width: 16),
               ],
-              
+
               // Action buttons
               if (voiceProvider.hasSelectedVoice)
                 ElevatedButton(
@@ -894,15 +958,18 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
               errorMessage: error,
               title: 'Lỗi tải danh sách giọng nói',
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Action buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => Provider.of<VoiceProvider>(context, listen: false).refresh(),
+                  onPressed: () => Provider.of<VoiceProvider>(
+                    context,
+                    listen: false,
+                  ).refresh(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Thử lại'),
                 ),
@@ -930,7 +997,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             Icon(
               Icons.voice_over_off,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -959,7 +1028,9 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
             Icon(
               Icons.record_voice_over,
               size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
             Text(
@@ -1007,7 +1078,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
 
   Future<void> _generateVoice(VoiceProvider voiceProvider) async {
     if (_previewText.trim().isEmpty) return;
-    
+
     try {
       final audioData = await voiceProvider.synthesizeText(_previewText);
       if (audioData != null && mounted) {
@@ -1024,7 +1095,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           final tempDir = await getTemporaryDirectory();
           final tempFile = File('${tempDir.path}/voice_preview.mp3');
           await tempFile.writeAsBytes(audioData);
-          
+
           await _audioPlayer.play(
             DeviceFileSource(tempFile.path),
             volume: _volume,
@@ -1044,7 +1115,10 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
     await _audioPlayer.stop();
   }
 
-  void _updateVoiceSettings(VoiceSettings settings, VoiceProvider voiceProvider) {
+  void _updateVoiceSettings(
+    VoiceSettings settings,
+    VoiceProvider voiceProvider,
+  ) {
     voiceProvider.updateVoiceSettings(settings);
   }
 
@@ -1061,7 +1135,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
   void _confirmSelection(VoiceProvider voiceProvider) {
     try {
       if (!mounted) return;
-      
+
       if (!voiceProvider.hasSelectedVoice) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1073,7 +1147,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
       }
 
       final selectedVoice = voiceProvider.selectedVoice!;
-      
+
       // Validate voice data
       if (selectedVoice.voiceId.isEmpty || selectedVoice.name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1089,7 +1163,7 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
       VoiceConfiguration voiceConfiguration;
       try {
         voiceConfiguration = selectedVoice.toVoiceConfiguration();
-        
+
         // Override settings with current user settings
         voiceConfiguration = voiceConfiguration.copyWith(
           settings: voiceProvider.currentSettings,
@@ -1097,18 +1171,26 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
       } catch (conversionError) {
         // Fallback to manual creation if conversion fails
         voiceConfiguration = VoiceConfiguration(
-          voiceId: selectedVoice.voiceId.isNotEmpty ? selectedVoice.voiceId : 'default_voice',
-          name: selectedVoice.name.isNotEmpty ? selectedVoice.name : 'Unknown Voice',
+          voiceId: selectedVoice.voiceId.isNotEmpty
+              ? selectedVoice.voiceId
+              : 'default_voice',
+          name: selectedVoice.name.isNotEmpty
+              ? selectedVoice.name
+              : 'Unknown Voice',
           gender: selectedVoice.gender,
-          language: selectedVoice.language.isNotEmpty ? selectedVoice.language : 'Vietnamese',
-          accent: selectedVoice.accent.isNotEmpty ? selectedVoice.accent : 'Northern',
+          language: selectedVoice.language.isNotEmpty
+              ? selectedVoice.language
+              : 'Vietnamese',
+          accent: selectedVoice.accent.isNotEmpty
+              ? selectedVoice.accent
+              : 'Northern',
           settings: voiceProvider.currentSettings,
         );
       }
-      
+
       // Call callback if provided - this is the key to updating the parent screen
       widget.onVoiceSelected?.call(voiceConfiguration);
-      
+
       // Show success feedback
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1122,10 +1204,12 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
       if (mounted) {
         // Log the error for debugging
         debugPrint('Voice selection confirmation error: $e');
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Đã xảy ra lỗi khi xác nhận giọng nói: ${e.toString()}'),
+            content: Text(
+              'Đã xảy ra lỗi khi xác nhận giọng nói: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -1147,11 +1231,15 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
               SizedBox(height: 8),
               Text('• Tab "Điều chỉnh": Tùy chỉnh các thông số giọng nói'),
               SizedBox(height: 8),
-              Text('• Tab "Thử nghiệm": Nghe thử giọng nói với văn bản tùy chỉnh'),
+              Text(
+                '• Tab "Thử nghiệm": Nghe thử giọng nói với văn bản tùy chỉnh',
+              ),
               SizedBox(height: 8),
               Text('• Sử dụng bộ lọc để tìm giọng phù hợp'),
               SizedBox(height: 8),
-              Text('• Điều chỉnh độ ổn định để cân bằng giữa chất lượng và biểu cảm'),
+              Text(
+                '• Điều chỉnh độ ổn định để cân bằng giữa chất lượng và biểu cảm',
+              ),
             ],
           ),
         ),
@@ -1182,7 +1270,11 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           children: [
             const Icon(Icons.error, color: Colors.white),
             const SizedBox(width: 8),
-            Expanded(child: Text('Lỗi phát âm thanh: Nhấn "Chi tiết" để xem và sao chép')),
+            Expanded(
+              child: Text(
+                'Lỗi phát âm thanh: Nhấn "Chi tiết" để xem và sao chép',
+              ),
+            ),
             TextButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -1193,7 +1285,10 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   icon: Icons.volume_off,
                 );
               },
-              child: const Text('Chi tiết', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Chi tiết',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -1215,7 +1310,11 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
           children: [
             const Icon(Icons.error, color: Colors.white),
             const SizedBox(width: 8),
-            Expanded(child: Text('Lỗi tạo giọng nói: Nhấn "Chi tiết" để xem và sao chép')),
+            Expanded(
+              child: Text(
+                'Lỗi tạo giọng nói: Nhấn "Chi tiết" để xem và sao chép',
+              ),
+            ),
             TextButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -1226,7 +1325,10 @@ class _VoiceSelectionScreenState extends State<VoiceSelectionScreen>
                   icon: Icons.record_voice_over,
                 );
               },
-              child: const Text('Chi tiết', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Chi tiết',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 class WebCorsHandler {
   // For web, we'll use a simple approach - let the browser handle CORS
   // and provide fallback error messages for users
-  
+
   static Future<Uint8List> handleCorsRequest(
     String originalUrl,
     Map<String, String> headers,
@@ -16,37 +16,94 @@ class WebCorsHandler {
       // For non-web platforms, return the original request
       throw UnsupportedError('This handler is only for web platform');
     }
-    
+
     try {
       // For web, try the direct request first
       // Browser will handle CORS automatically
-      final response = await http.post(
-        Uri.parse(originalUrl),
-        headers: headers,
-        body: body,
-      ).timeout(const Duration(seconds: 60));
-      
+      final response = await http
+          .post(Uri.parse(originalUrl), headers: headers, body: body)
+          .timeout(const Duration(seconds: 60));
+
       if (response.statusCode == 200) {
         return response.bodyBytes;
       } else {
         throw Exception('Request failed with status: ${response.statusCode}');
       }
     } on SocketException catch (e) {
-      throw Exception('Network error: ${e.message}. This might be a CORS issue.');
+      throw Exception(
+        'Network error: ${e.message}. This might be a CORS issue.',
+      );
     } on HttpException catch (e) {
       throw Exception('HTTP error: ${e.message}. This might be a CORS issue.');
     } catch (e) {
       throw Exception('Request failed: $e');
     }
   }
-  
+
+  /// Web-compatible CORS request with multiple fallback strategies
+  static Future<Uint8List> handleCorsRequestWithFallback(
+    String originalUrl,
+    Map<String, String> headers,
+    Uint8List body,
+  ) async {
+    if (!kIsWeb) {
+      throw UnsupportedError('This handler is only for web platform');
+    }
+
+    // Strategy 1: Direct request (most browsers handle CORS automatically)
+    try {
+      final response = await http
+          .post(Uri.parse(originalUrl), headers: headers, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+    } catch (e) {
+      print('Direct request failed: $e');
+    }
+
+    // Strategy 2: Try with CORS proxy
+    try {
+      final corsProxyUrl = 'https://cors-anywhere.herokuapp.com/$originalUrl';
+      final response = await http
+          .post(Uri.parse(corsProxyUrl), headers: headers, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+    } catch (e) {
+      print('CORS proxy failed: $e');
+    }
+
+    // Strategy 3: Try with different CORS proxy
+    try {
+      final corsProxyUrl2 =
+          'https://api.allorigins.win/raw?url=${Uri.encodeComponent(originalUrl)}';
+      final response = await http
+          .post(Uri.parse(corsProxyUrl2), headers: headers, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+    } catch (e) {
+      print('Alternative CORS proxy failed: $e');
+    }
+
+    throw Exception(
+      'All CORS strategies failed. Please check your API key and network connection.',
+    );
+  }
+
   static Future<http.Response> handleCorsResponse(
     Future<http.Response> originalRequest,
   ) async {
     if (!kIsWeb) {
       return await originalRequest;
     }
-    
+
     try {
       return await originalRequest;
     } on SocketException catch (e) {

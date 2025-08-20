@@ -32,136 +32,258 @@ class ChatMessageWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
+        mainAxisAlignment: isUserMessage
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar or user icon
-          if (!isUserMessage) ...[
-            _buildAvatarPlaceholder(context),
-            const SizedBox(width: 12),
-          ] else
-            const SizedBox(width: 48), // Space for avatar alignment
-          
-          // Message content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Message bubble
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isUserMessage
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+        children: isUserMessage
+            ? [
+                // User message: content first, then avatar
+                Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Message text
-                      Text(
-                        message,
-                        style: TextStyle(
-                          color: isUserMessage
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 16,
+                      // Message bubble
+                      Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
                         ),
-                      ),
-                      
-                      // Voice player widget (for avatar messages)
-                      if (!isUserMessage && audioId != null) ...[
-                        const SizedBox(height: 8),
-                        VoicePlayerWidget(
-                          audioId: audioId!,
-                          audioText: message,
-                          height: 60,
-                        ),
-                      ],
-                      
-                      // Voice configuration info (for avatar messages without audio)
-                      if (!isUserMessage && voiceConfig != null && audioId == null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.record_voice_over,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${voiceConfig!.name} • ${voiceConfig!.gender.name}',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                fontSize: 12,
-                              ),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(4),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                      ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // Message text
+                            Text(
+                              message,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Timestamp
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, right: 4),
+                        child: Text(
+                          _formatTimestamp(timestamp),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                
-                // Timestamp
-                Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4),
-                  child: Text(
-                    _formatTimestamp(timestamp),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                      fontSize: 12,
-                    ),
+
+                const SizedBox(width: 12),
+                _buildUserAvatarPlaceholder(context),
+              ]
+            : [
+                // Bot message: avatar first, then content
+                _buildAvatarPlaceholder(context),
+                const SizedBox(width: 12),
+
+                // Message content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Message bubble
+                      Container(
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(4),
+                            topRight: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(16),
+                          ),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withOpacity(0.2),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.shadow.withOpacity(0.1),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Message text
+                            Text(
+                              message,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.left,
+                            ),
+
+                            // Voice player widget (for avatar messages)
+                            if (audioId != null) ...[
+                              const SizedBox(height: 8),
+                              VoicePlayerWidget(
+                                audioId: audioId!,
+                                audioText: message,
+                                height: 60,
+                              ),
+                            ],
+
+                            // Voice configuration info (for avatar messages without audio)
+                            if (voiceConfig != null && audioId == null) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.record_voice_over,
+                                    size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withOpacity(0.7),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${voiceConfig!.name} • ${voiceConfig!.gender.name}',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withValues(alpha: 0.7),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // Timestamp
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Text(
+                          _formatTimestamp(timestamp),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-          
-          // User avatar space (for user messages)
-          if (isUserMessage) ...[
-            const SizedBox(width: 12),
-            _buildUserAvatarPlaceholder(context),
-          ] else
-            const SizedBox(width: 48), // Space for user avatar alignment
-        ],
       ),
     );
   }
 
   Widget _buildAvatarPlaceholder(BuildContext context) {
     if (avatarConfig != null) {
-      return AvatarDisplayWidget(
-        avatarConfig: avatarConfig,
-        size: 40,
-        showAnimation: false,
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: AvatarDisplayWidget(
+          avatarConfig: avatarConfig,
+          size: 48,
+          showAnimation: false,
+        ),
       );
     }
-    
+
     return Container(
-      width: 40,
-      height: 40,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primaryContainer,
+            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Theme.of(context).colorScheme.primary,
           width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(
         Icons.person,
-        size: 24,
+        size: 28,
         color: Theme.of(context).colorScheme.onPrimaryContainer,
       ),
     );
@@ -169,19 +291,33 @@ class ChatMessageWidget extends StatelessWidget {
 
   Widget _buildUserAvatarPlaceholder(BuildContext context) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.secondaryContainer,
+            Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Theme.of(context).colorScheme.secondary,
           width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(
         Icons.person_outline,
-        size: 24,
+        size: 28,
         color: Theme.of(context).colorScheme.onSecondaryContainer,
       ),
     );
@@ -190,7 +326,7 @@ class ChatMessageWidget extends StatelessWidget {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inSeconds < 60) {
       return 'vài giây trước';
     } else if (difference.inMinutes < 60) {
@@ -207,10 +343,7 @@ class ChatMessageWidget extends StatelessWidget {
 class AvatarInfoWidget extends StatelessWidget {
   final AvatarConfiguration avatarConfig;
 
-  const AvatarInfoWidget({
-    super.key,
-    required this.avatarConfig,
-  });
+  const AvatarInfoWidget({super.key, required this.avatarConfig});
 
   @override
   Widget build(BuildContext context) {

@@ -14,11 +14,11 @@ class ElevenLabsService {
   final http.Client _httpClient;
   final SecureStorage _secureStorage;
   static const String _apiKeyStorageKey = 'elevenlabs_api_key';
-  
+
   // Rate limiting
   DateTime? _lastRequestTime;
   static const Duration _minRequestInterval = Duration(milliseconds: 100);
-  
+
   // Retry configuration
   static const int _maxRetries = 3;
   static const Duration _baseRetryDelay = Duration(seconds: 1);
@@ -26,8 +26,8 @@ class ElevenLabsService {
   ElevenLabsService({
     required http.Client httpClient,
     required SecureStorage secureStorage,
-  })  : _httpClient = httpClient,
-        _secureStorage = secureStorage;
+  }) : _httpClient = httpClient,
+       _secureStorage = secureStorage;
 
   // API Key Management
   Future<String?> getApiKey() async {
@@ -83,23 +83,38 @@ class ElevenLabsService {
   Future<List<ElevenLabsVoiceResponse>> getVoices() async {
     final response = await _makeAuthenticatedRequest('GET', '/v1/voices');
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final voicesResponse = ElevenLabsVoicesResponse.fromJson(Map<String, dynamic>.from(data));
+    final voicesResponse = ElevenLabsVoicesResponse.fromJson(
+      Map<String, dynamic>.from(data),
+    );
     return voicesResponse.voices;
   }
 
   Future<ElevenLabsVoiceResponse> getVoice(String voiceId) async {
-    final response = await _makeAuthenticatedRequest('GET', '/v1/voices/$voiceId');
+    final response = await _makeAuthenticatedRequest(
+      'GET',
+      '/v1/voices/$voiceId',
+    );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return ElevenLabsVoiceResponse.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<ElevenLabsVoiceSettingsResponse> getVoiceSettings(String voiceId) async {
-    final response = await _makeAuthenticatedRequest('GET', '/v1/voices/$voiceId/settings');
+  Future<ElevenLabsVoiceSettingsResponse> getVoiceSettings(
+    String voiceId,
+  ) async {
+    final response = await _makeAuthenticatedRequest(
+      'GET',
+      '/v1/voices/$voiceId/settings',
+    );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return ElevenLabsVoiceSettingsResponse.fromJson(Map<String, dynamic>.from(data));
+    return ElevenLabsVoiceSettingsResponse.fromJson(
+      Map<String, dynamic>.from(data),
+    );
   }
 
-  Future<void> updateVoiceSettings(String voiceId, VoiceSettingsModel settings) async {
+  Future<void> updateVoiceSettings(
+    String voiceId,
+    VoiceSettingsModel settings,
+  ) async {
     final requestBody = VoiceSettingsRequest.fromDomain(settings);
     await _makeAuthenticatedRequest(
       'POST',
@@ -127,12 +142,14 @@ class ElevenLabsService {
   }) async {
     final request = VoiceSynthesisRequest(
       text: text,
-      voiceSettings: settings != null ? VoiceSettingsRequest.fromDomain(settings) : const VoiceSettingsRequest(
-        stability: 0.5,
-        similarityBoost: 0.5,
-        style: 0,
-        useSpeakerBoost: true,
-      ),
+      voiceSettings: settings != null
+          ? VoiceSettingsRequest.fromDomain(settings)
+          : const VoiceSettingsRequest(
+              stability: 0.5,
+              similarityBoost: 0.5,
+              style: 0,
+              useSpeakerBoost: true,
+            ),
       modelId: modelId ?? 'eleven_monolingual_v1',
       languageCode: null, // Không gửi language_code vì API không hỗ trợ
       pronunciationDictionaryLocators: pronunciationDictionaryLocators ?? [],
@@ -148,41 +165,42 @@ class ElevenLabsService {
 
     // Debug: Log the request body for web debugging
     // DEBUG: ElevenLabs request body: ${request.toJson()}
-    
+
     try {
       // For web, we need a special approach due to CORS issues
       if (kIsWeb) {
         // DEBUG: Web platform detected, using special CORS handling...
-        
+
         // Use a simplified approach for web - try with minimal headers
-        final originalUrl = '${ApiConstants.elevenLabsBaseUrl}/v1/text-to-speech/$voiceId';
+        final originalUrl =
+            '${ApiConstants.elevenLabsBaseUrl}/v1/text-to-speech/$voiceId';
         final apiKey = await getApiKey();
         if (apiKey == null) {
           throw const ApiKeyException(message: 'API key not found');
         }
-        
+
         final headers = {
           'xi-api-key': apiKey,
           'Content-Type': 'application/json',
           'User-Agent': 'Avatar-Config-App/1.0.0',
         };
-        
+
         final requestBody = jsonEncode(request.toJson());
-        
+
         try {
-          // Try with CORS proxy first for web
+          // Try with CORS handler with multiple fallback strategies for web
           final bodyBytes = utf8.encode(requestBody);
-          return await WebCorsHandler.handleCorsRequest(
+          return await WebCorsHandler.handleCorsRequestWithFallback(
             originalUrl,
             headers,
             bodyBytes,
           );
         } catch (corsError) {
-          // DEBUG: CORS proxy failed: $corsError
+          // DEBUG: CORS handler failed: $corsError
           rethrow;
         }
       }
-      
+
       // For non-web platforms, use the normal approach
       final response = await _makeAuthenticatedRequest(
         'POST',
@@ -199,7 +217,6 @@ class ElevenLabsService {
       }
 
       return response.bodyBytes;
-      
     } catch (e) {
       // DEBUG: Request failed: $e
       rethrow;
@@ -210,7 +227,9 @@ class ElevenLabsService {
   Future<List<ElevenLabsModelInfo>> getModels() async {
     final response = await _makeAuthenticatedRequest('GET', '/v1/models');
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final modelsResponse = ElevenLabsModelsResponse.fromJson(Map<String, dynamic>.from(data));
+    final modelsResponse = ElevenLabsModelsResponse.fromJson(
+      Map<String, dynamic>.from(data),
+    );
     return modelsResponse.models;
   }
 
@@ -252,22 +271,22 @@ class ElevenLabsService {
     await _enforceRateLimit();
 
     final uri = Uri.parse('${ApiConstants.elevenLabsBaseUrl}$endpoint');
-    
+
     // For web, we need to handle CORS differently
     if (kIsWeb) {
       // DEBUG: Web request to $uri with method $method
       // DEBUG: Request body: $body
-      
+
       // Use a simple approach for web - try with minimal headers
       // final webHeaders = {
       //   'Content-Type': 'application/json',
       //   'User-Agent': 'Avatar-Config-App/1.0.0',
       //   if (headers != null) ...headers,
       // };
-      
+
       // DEBUG: Web request headers: $webHeaders
     }
-    
+
     final requestHeaders = {
       'User-Agent': 'Avatar-Config-App/1.0.0',
       'Accept': 'application/json',
@@ -280,32 +299,40 @@ class ElevenLabsService {
 
         switch (method.toUpperCase()) {
           case 'GET':
-            response = await _httpClient.get(uri, headers: requestHeaders).timeout(
-              const Duration(milliseconds: ApiConstants.connectionTimeout),
-            );
+            response = await _httpClient
+                .get(uri, headers: requestHeaders)
+                .timeout(
+                  const Duration(milliseconds: ApiConstants.connectionTimeout),
+                );
             break;
           case 'POST':
-            response = await _httpClient.post(
-              uri,
-              headers: requestHeaders,
-              body: body != null ? jsonEncode(body) : null,
-            ).timeout(
-              const Duration(milliseconds: ApiConstants.receiveTimeout),
-            );
+            response = await _httpClient
+                .post(
+                  uri,
+                  headers: requestHeaders,
+                  body: body != null ? jsonEncode(body) : null,
+                )
+                .timeout(
+                  const Duration(milliseconds: ApiConstants.receiveTimeout),
+                );
             break;
           case 'PUT':
-            response = await _httpClient.put(
-              uri,
-              headers: requestHeaders,
-              body: body != null ? jsonEncode(body) : null,
-            ).timeout(
-              const Duration(milliseconds: ApiConstants.receiveTimeout),
-            );
+            response = await _httpClient
+                .put(
+                  uri,
+                  headers: requestHeaders,
+                  body: body != null ? jsonEncode(body) : null,
+                )
+                .timeout(
+                  const Duration(milliseconds: ApiConstants.receiveTimeout),
+                );
             break;
           case 'DELETE':
-            response = await _httpClient.delete(uri, headers: requestHeaders).timeout(
-              const Duration(milliseconds: ApiConstants.connectionTimeout),
-            );
+            response = await _httpClient
+                .delete(uri, headers: requestHeaders)
+                .timeout(
+                  const Duration(milliseconds: ApiConstants.connectionTimeout),
+                );
             break;
           default:
             throw ArgumentError('Unsupported HTTP method: $method');
@@ -322,7 +349,6 @@ class ElevenLabsService {
 
         _handleResponseErrors(response);
         return response;
-
       } on SocketException {
         if (attempt == _maxRetries) {
           throw const NetworkException(message: 'No internet connection');
@@ -357,7 +383,9 @@ class ElevenLabsService {
       case 401:
         throw const ApiKeyException(message: 'Invalid or missing API key');
       case 403:
-        throw const ServerException(message: 'Forbidden - insufficient permissions');
+        throw const ServerException(
+          message: 'Forbidden - insufficient permissions',
+        );
       case 404:
         throw const ServerException(message: 'Resource not found');
       case 422:
@@ -386,7 +414,7 @@ class ElevenLabsService {
   String _extractErrorMessage(http.Response response) {
     try {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      
+
       // Try different error message formats
       if (data['detail'] != null) {
         if (data['detail'] is Map) {
@@ -395,15 +423,15 @@ class ElevenLabsService {
         }
         return data['detail'].toString();
       }
-      
+
       if (data['message'] != null) {
         return data['message'].toString();
       }
-      
+
       if (data['error'] != null) {
         return data['error'].toString();
       }
-      
+
       return 'Unknown error';
     } catch (e) {
       return 'Failed to parse error response';
@@ -424,7 +452,7 @@ class ElevenLabsService {
     final baseDelay = _baseRetryDelay.inMilliseconds * (1 << attempt);
     final jitter = (baseDelay * 0.1).round();
     final delay = baseDelay + (jitter * (0.5 - (attempt % 2)));
-    
+
     return Duration(milliseconds: delay.clamp(1000, 30000).toInt());
   }
 

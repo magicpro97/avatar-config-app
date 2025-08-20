@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 import '../models/voice_model.dart';
 import 'elevenlabs_service.dart';
 
@@ -20,6 +21,7 @@ class AudioService {
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ElevenLabsService _elevenLabsService;
   final Map<String, String> _audioCache = {};
+  final Map<String, Uint8List> _audioDataCache = {}; // For web platform
   final Map<String, AudioState> _audioStates = {};
   final Map<String, Duration> _audioDurations = {};
   final Map<String, Duration> _audioPositions = {};
@@ -158,13 +160,18 @@ class AudioService {
         modelId: modelId,
       );
 
-      // Save audio to temporary file
-      final tempDir = await getTemporaryDirectory();
-      final audioFile = File('${tempDir.path}/$audioId.mp3');
-      await audioFile.writeAsBytes(audioData);
-
-      // Cache the audio file
-      _audioCache[audioId] = audioFile.path;
+      // Handle web vs native platforms differently
+      if (kIsWeb) {
+        // For web, store audio data directly in memory
+        _audioCache[audioId] = 'web_audio_$audioId';
+        _audioDataCache[audioId] = audioData;
+      } else {
+        // For native platforms, save to temporary file
+        final tempDir = await getTemporaryDirectory();
+        final audioFile = File('${tempDir.path}/$audioId.mp3');
+        await audioFile.writeAsBytes(audioData);
+        _audioCache[audioId] = audioFile.path;
+      }
 
       // Play the audio
       await playAudio(audioId);

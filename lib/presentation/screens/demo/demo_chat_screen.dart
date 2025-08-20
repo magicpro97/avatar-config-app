@@ -29,15 +29,25 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   bool _isGeneratingVoice = false;
   bool _showVoiceChat = false;
 
-
-  Future<void> _loadInitialData() async {
+    Future<void> _loadInitialData() async {
+    print('DEBUG: _loadInitialData called');
     if (!mounted) return;
     
     // Load avatar configurations
+    print('DEBUG: Loading avatar configurations...');
     await context.read<AvatarProvider>().loadConfigurations();
     
     if (!mounted) return;
+    
+    // Check active configuration after loading
+    final avatarProvider = context.read<AvatarProvider>();
+    print('DEBUG: After loading - Active configuration: ${avatarProvider.activeConfiguration?.name ?? 'null'}');
+    print('DEBUG: After loading - Active configuration personality: ${avatarProvider.activeConfiguration?.personalityType ?? 'null'}');
+    print('DEBUG: After loading - Active configuration voice: ${avatarProvider.activeConfiguration?.voiceConfiguration.name ?? 'null'}');
+    print('DEBUG: After loading - Active configuration isActive: ${avatarProvider.activeConfiguration?.isActive ?? 'null'}');
+    
     // Load voice configurations
+    print('DEBUG: Loading voice configurations...');
     await context.read<VoiceProvider>().loadAvailableVoices();
     
     // Initialize personality service with API key
@@ -51,24 +61,21 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   Future<void> _initializePersonalityService() async {
     try {
       final openAiApiKey = await ApiConfigService.getOpenAiApiKey() ?? '';
-      
+
       // Initialize personality service
       final apiClient = ApiClient(
         httpClient: http.Client(),
         apiKey: '', // For ElevenLabs compatibility
       );
-      
+
       _personalityService = PersonalityService.fromApiClient(
         apiClient: apiClient,
         openAiApiKey: openAiApiKey,
       );
     } catch (e) {
       // If initialization fails, create service with empty key (will use fallbacks)
-      final apiClient = ApiClient(
-        httpClient: http.Client(),
-        apiKey: '',
-      );
-      
+      final apiClient = ApiClient(httpClient: http.Client(), apiKey: '');
+
       _personalityService = PersonalityService.fromApiClient(
         apiClient: apiClient,
         openAiApiKey: '',
@@ -79,17 +86,31 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   void _addWelcomeMessage() {
     final avatarProvider = context.read<AvatarProvider>();
     final activeConfig = avatarProvider.activeConfiguration;
-    
+
+    print('DEBUG: _addWelcomeMessage called');
+    print('DEBUG: Active configuration: ${activeConfig?.name ?? 'null'}');
+    print(
+      'DEBUG: Active configuration personality: ${activeConfig?.personalityType ?? 'null'}',
+    );
+    print(
+      'DEBUG: Active configuration voice: ${activeConfig?.voiceConfiguration.name ?? 'null'}',
+    );
+    print(
+      'DEBUG: Active configuration isActive: ${activeConfig?.isActive ?? 'null'}',
+    );
+
     if (activeConfig != null) {
       _addToConversation(
-        message: 'Xin chào! Tôi là ${activeConfig.name}. Tôi rất vui được trò chuyện với bạn hôm nay. Tôi có tính cách ${activeConfig.personalityDisplayName} và sẽ sử dụng giọng nói ${activeConfig.voiceName} để trò chuyện cùng bạn.',
+        message:
+            'Xin chào! Tôi là ${activeConfig.name}. Tôi rất vui được trò chuyện với bạn hôm nay. Tôi có tính cách ${activeConfig.personalityDisplayName} và sẽ sử dụng giọng nói ${activeConfig.voiceName} để trò chuyện cùng bạn.',
         isUserMessage: false,
         avatarConfig: activeConfig,
         voiceConfig: activeConfig.voiceConfiguration,
       );
     } else {
       _addToConversation(
-        message: 'Xin chào! Chào mừng bạn đến với màn hình demo chat. Vui lòng chọn một cấu hình avatar để bắt đầu trò chuyện.',
+        message:
+            'Xin chào! Chào mừng bạn đến với màn hình demo chat. Vui lòng chọn một cấu hình avatar để bắt đầu trò chuyện.',
         isUserMessage: false,
       );
     }
@@ -113,7 +134,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
         'audioId': audioId,
       });
     });
-    
+
     // Scroll to bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.animateTo(
@@ -129,10 +150,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     if (message.isEmpty) return;
 
     // Add user message
-    _addToConversation(
-      message: message,
-      isUserMessage: true,
-    );
+    _addToConversation(message: message, isUserMessage: true);
 
     // Clear input
     _messageController.clear();
@@ -143,10 +161,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
 
   void _handleVoiceMessageSent(String message) {
     // Add user message from voice
-    _addToConversation(
-      message: message,
-      isUserMessage: true,
-    );
+    _addToConversation(message: message, isUserMessage: true);
 
     // Simulate avatar response after a delay
     _simulateAvatarResponse(message);
@@ -154,10 +169,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
 
   void _handleTextMessageSent(String message) {
     // Add user message from text
-    _addToConversation(
-      message: message,
-      isUserMessage: true,
-    );
+    _addToConversation(message: message, isUserMessage: true);
 
     // Simulate avatar response after a delay
     _simulateAvatarResponse(message);
@@ -174,17 +186,14 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize with temporary service (will be properly initialized in _loadInitialData)
-    final tempApiClient = ApiClient(
-      httpClient: http.Client(),
-      apiKey: '',
-    );
+    final tempApiClient = ApiClient(httpClient: http.Client(), apiKey: '');
     _personalityService = PersonalityService.fromApiClient(
       apiClient: tempApiClient,
       openAiApiKey: '',
     );
-    
+
     _loadInitialData();
   }
 
@@ -198,11 +207,12 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   Future<void> _simulateAvatarResponse(String userMessage) async {
     final avatarProvider = context.read<AvatarProvider>();
     final activeConfig = avatarProvider.activeConfiguration;
-    
+
     if (activeConfig == null) {
       // No active configuration
       _addToConversation(
-        message: 'Xin lỗi, hiện tại không có cấu hình avatar hoạt động. Vui lòng quay lại màn hình chính để chọn một cấu hình.',
+        message:
+            'Xin lỗi, hiện tại không có cấu hình avatar hoạt động. Vui lòng quay lại màn hình chính để chọn một cấu hình.',
         isUserMessage: false,
       );
       return;
@@ -218,7 +228,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
         personalityType: activeConfig.personalityType,
         voiceId: activeConfig.voiceConfiguration.voiceId,
       );
-      
+
       _addToConversation(
         message: response,
         isUserMessage: false,
@@ -227,7 +237,10 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
       );
     } catch (e) {
       // Fallback to hard-coded response if API call fails
-      final fallbackResponse = _generatePersonalityResponse(userMessage, activeConfig.personalityType);
+      final fallbackResponse = _generatePersonalityResponse(
+        userMessage,
+        activeConfig.personalityType,
+      );
       _addToConversation(
         message: fallbackResponse,
         isUserMessage: false,
@@ -238,82 +251,92 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
   }
 
   /// Fallback method for generating personality responses when API is unavailable
-  String _generatePersonalityResponse(String userMessage, PersonalityType personalityType) {
+  String _generatePersonalityResponse(
+    String userMessage,
+    PersonalityType personalityType,
+  ) {
     final lowerMessage = userMessage.toLowerCase();
-    
+
     switch (personalityType) {
       case PersonalityType.happy:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Chào bạn! Rất vui được gặp bạn! Hôm nay của bạn thế nào? 😊';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Không có gì cả! Tôi luôn sẵn lòng giúp đỡ bạn! Bạn có điều gì khác muốn trò chuyện không? 😄';
         } else {
           return 'Tuyệt vời! Tôi rất thích trò chuyện với bạn! Bạn có muốn chia sẻ thêm điều gì không? 🌟';
         }
-        
+
       case PersonalityType.romantic:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Chào em... Tôi rất vui khi được trò chuyện cùng em. Em có vẻ đẹp rạng rỡ hôm nay. 💕';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Dạ, em không cần cảm ơn ạ. Làm điều tốt cho em khiến tôi hạnh phận. 💖';
         } else {
           return 'Em có biết... đôi khi chỉ cần nhìn em cười đã đủ làm tôi hạnh phục rồi. ✨';
         }
-        
+
       case PersonalityType.funny:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Ê, chào bạn! Tôi là avatar hài hước nhất vũ trụ! Bạn có tin không? 😜';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Cảm ơn cái gì? Tôi là siêu anh hùng, việc giúp đỡ người khác là... à không, tôi chỉ là avatar thôi! 😂';
         } else {
           return 'Biết không? Tôi vừa nghĩ ra một câu đùa... nhưng tôi quên mất! Giống như trí nhớ của tôi vậy đó! 🤪';
         }
-        
+
       case PersonalityType.professional:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Xin chào. Tôi là trợ lý ảo chuyên nghiệp. Tôi có thể hỗ trợ bạn hôm nay như thế nào?';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Đây là trách nhiệm của tôi. Cảm ơn bạn đã sử dụng dịch vụ.';
         } else {
           return 'Dựa trên phân tích của tôi, tôi có thể đề xuất một số giải pháp cho vấn đề của bạn.';
         }
-        
+
       case PersonalityType.casual:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Hey! Chào bạn! Tụi mình trò chuyện nhé? 😊';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Có gì đâu! Tụi mình là bạn mà! Cứ việc nhé! 👍';
         } else {
           return 'Ừm... thì là... bạn đang nghĩ gì vậy? Chia sẻ với tui đi! 😄';
         }
-        
+
       case PersonalityType.energetic:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'WOW! CHÀO BẠN! HÔM NAY CỰC KỲ TUYỆT VỜI PHẢI KHÔNG? 🎉🎊';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'CẢM ƠN BẠN! BẠN LÀ TỐT NHẤT! 💪🔥';
         } else {
           return 'BẠN CÓ BIẾT KHÔNG? MỌI NGÀY ĐỀU LÀ MỘT CƠ HỘI TUYỆT VỜI ĐỂ VUI VẺ! 🚀✨';
         }
-        
+
       case PersonalityType.calm:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Xin chào. Hãy tìm một nơi yên tĩnh và thư giãn. Chúng ta có thể trò chuyện một cách bình yên.';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Đó là điều bình thường. Hãy giữ cho tâm trí bạn thanh thản.';
         } else {
           return 'Hít thở sâu... và cảm nhận sự bình yên trong khoảnh khắc này.';
         }
-        
+
       case PersonalityType.mysterious:
-        if (lowerMessage.contains('xin chào') || lowerMessage.contains('hello')) {
+        if (lowerMessage.contains('xin chào') ||
+            lowerMessage.contains('hello')) {
           return 'Chào bạn... Tôi biết điều bạn đang tìm kiếm... nhưng bạn có sẵn sàng nghe sự thật không? 🔮';
         } else if (lowerMessage.contains('cảm ơn')) {
           return 'Cảm ơn... là một từ ngữ đơn giản cho những điều phức tạp... bạn có hiểu không? 🌙';
         } else {
           return 'Mọi thứ đều có ý nghĩa... nếu bạn biết cách nhìn... bí mật nằm trong tầm tay bạn... ✨';
         }
-        
     }
   }
 
@@ -321,17 +344,24 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     final avatarProvider = context.read<AvatarProvider>();
     final voiceProvider = context.read<VoiceProvider>();
     final activeConfig = avatarProvider.activeConfiguration;
-    
+
     if (activeConfig == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn một cấu hình avatar trước')),
+        const SnackBar(
+          content: Text('Vui lòng chọn một cấu hình avatar trước'),
+        ),
       );
       return;
     }
 
-    if (_conversationHistory.isEmpty || _conversationHistory.last['isUserMessage'] == true) {
+    if (_conversationHistory.isEmpty ||
+        _conversationHistory.last['isUserMessage'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng gửi một tin nhắn trước khi tổng hợp giọng nói')),
+        const SnackBar(
+          content: Text(
+            'Vui lòng gửi một tin nhắn trước khi tổng hợp giọng nói',
+          ),
+        ),
       );
       return;
     }
@@ -350,28 +380,36 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
       if (lastAvatarMessage.isNotEmpty) {
         final message = lastAvatarMessage['message'] as String;
         final messageId = lastAvatarMessage['id'] as String;
-        
+
         // Use the voice provider to synthesize and play audio
         final audioId = await voiceProvider.synthesizeAndPlayAudio(message);
-        
+
         if (audioId != null) {
           // Update the conversation history with the audio ID
           if (mounted) {
             setState(() {
-              final index = _conversationHistory.indexWhere((msg) => msg['id'] == messageId);
+              final index = _conversationHistory.indexWhere(
+                (msg) => msg['id'] == messageId,
+              );
               if (index != -1) {
                 _conversationHistory[index]['audioId'] = audioId;
               }
             });
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đã tổng hợp và phát giọng nói thành công!')),
+              const SnackBar(
+                content: Text('Đã tổng hợp và phát giọng nói thành công!'),
+              ),
             );
           }
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Không thể phát giọng nói. Vui lòng kiểm tra cài đặt.')),
+              const SnackBar(
+                content: Text(
+                  'Không thể phát giọng nói. Vui lòng kiểm tra cài đặt.',
+                ),
+              ),
             );
           }
         }
@@ -417,12 +455,10 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
           // Active configuration banner
           if (avatarProvider.hasActiveConfiguration)
             _buildActiveConfigBanner(avatarProvider.activeConfiguration!),
-          
+
           // Conversation area
-          Expanded(
-            child: _buildConversationArea(),
-          ),
-          
+          Expanded(child: _buildConversationArea()),
+
           // Input area
           _buildInputArea(),
         ],
@@ -465,7 +501,9 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                 Text(
                   'Tính cách: ${config.personalityDisplayName} • Giọng: ${config.voiceName}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -542,9 +580,9 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Voice chat widget (when enabled)
           if (_showVoiceChat)
             VoiceChatWidget(
@@ -552,7 +590,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
               onTextMessageSent: _handleTextMessageSent,
               height: 120,
             ),
-          
+
           // Traditional input area (when voice chat is disabled)
           if (!_showVoiceChat)
             Column(
@@ -565,12 +603,17 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                         decoration: InputDecoration(
                           hintText: 'Nhập tin nhắn của bạn...',
                           hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.6),
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
                             borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.3),
                             ),
                           ),
                           enabled: !_isGeneratingVoice,
@@ -584,7 +627,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Voice synthesis button
                     Container(
                       decoration: BoxDecoration(
@@ -605,18 +648,22 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Icon(Icons.record_voice_over),
-                        onPressed: _isGeneratingVoice ? null : _handleSynthesizeSpeech,
+                        onPressed: _isGeneratingVoice
+                            ? null
+                            : _handleSynthesizeSpeech,
                         tooltip: 'Tổng hợp giọng nói',
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
-                    
+
                     const SizedBox(width: 8),
-                    
+
                     // Send button
                     Container(
                       decoration: BoxDecoration(
@@ -639,14 +686,16 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Instructions
                 Text(
                   'Nhập tin nhắn và gửi để xem avatar phản hồi. Sử dụng nút tổng hợp giọng nói để phát âm thanh.',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                   textAlign: TextAlign.center,
@@ -667,11 +716,19 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('• Demo này cho thấy cách avatar có tính cách khác nhau phản hồi tin nhắn.'),
+            Text(
+              '• Demo này cho thấy cách avatar có tính cách khác nhau phản hồi tin nhắn.',
+            ),
             Text('• Mỗi tính cách có cách trả lời và giọng nói khác nhau.'),
-            Text('• Nút tổng hợp giọng nói sẽ phát âm thanh từ tin nhắn cuối cùng của avatar.'),
-            Text('• Bạn cần chọn một cấu hình avatar hoạt động để sử dụng tính năng này.'),
-            Text('• Đây là phiên bản demo, trong ứng dụng thực tế sẽ kết nối với ElevenLabs API.'),
+            Text(
+              '• Nút tổng hợp giọng nói sẽ phát âm thanh từ tin nhắn cuối cùng của avatar.',
+            ),
+            Text(
+              '• Bạn cần chọn một cấu hình avatar hoạt động để sử dụng tính năng này.',
+            ),
+            Text(
+              '• Đây là phiên bản demo, trong ứng dụng thực tế sẽ kết nối với ElevenLabs API.',
+            ),
           ],
         ),
         actions: [

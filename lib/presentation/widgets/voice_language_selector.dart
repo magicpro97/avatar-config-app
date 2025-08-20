@@ -43,7 +43,7 @@ class VoiceLanguageSelector extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Language selection grid
           Wrap(
             spacing: 12,
@@ -108,7 +108,7 @@ class VoiceLanguageSelector extends StatelessWidget {
       'Malay': 'Tiếng Malaysia',
       'Tagalog': 'Tiếng Philippines',
     };
-    
+
     return languageMap[language] ?? language;
   }
 
@@ -143,7 +143,7 @@ class VoiceLanguageSelector extends StatelessWidget {
       'Malay': 'Bahasa Melayu',
       'Tagalog': 'Tagalog',
     };
-    
+
     return nativeNameMap[language] ?? language;
   }
 
@@ -178,7 +178,7 @@ class VoiceLanguageSelector extends StatelessWidget {
       'Malay': Icons.language,
       'Tagalog': Icons.language,
     };
-    
+
     return iconMap[language] ?? Icons.translate;
   }
 }
@@ -211,10 +211,7 @@ class _LanguageCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        constraints: const BoxConstraints(
-          minWidth: 120,
-          minHeight: 90,
-        ),
+        constraints: const BoxConstraints(minWidth: 120, minHeight: 90),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
@@ -266,7 +263,8 @@ class _LanguageCard extends StatelessWidget {
   }
 }
 
-// Compact dropdown version
+/// Compact dropdown version với xử lý overflow tốt hơn
+/// Sửa lỗi "Bottom overflowed by X pixel" khi dropdown menu mở ra
 class CompactVoiceLanguageSelector extends StatelessWidget {
   final List<String> availableLanguages;
   final String? selectedLanguage;
@@ -296,6 +294,7 @@ class CompactVoiceLanguageSelector extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -315,77 +314,91 @@ class CompactVoiceLanguageSelector extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String?>(
-            value: selectedLanguage,
-            hint: Text(hint ?? 'Chọn ngôn ngữ'),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: colorScheme.outline.withValues(alpha: 0.3),
+          // Wrap dropdown trong SizedBox để kiểm soát kích thước
+          SizedBox(
+            height: 56, // Chiều cao cố định cho dropdown
+            child: DropdownButtonFormField<String?>(
+              initialValue: selectedLanguage,
+              hint: Text(hint ?? 'Chọn ngôn ngữ'),
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: colorScheme.outline.withValues(alpha: 0.3),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: colorScheme.primary,
-                ),
-              ),
-              filled: true,
-              fillColor: colorScheme.surface.withValues(alpha: 0.5),
-            ),
-            items: [
-              if (allowNull)
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Tất cả'),
-                ),
-              ...availableLanguages.map(
-                (language) => DropdownMenuItem<String?>(
-                  value: language,
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getLanguageIcon(language),
-                        size: 16,
-                        color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _getLanguageDisplayName(language),
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            Text(
-                              _getLanguageNativeName(language),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.3),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: colorScheme.primary),
+                ),
+                filled: true,
+                fillColor: colorScheme.surface.withValues(alpha: 0.5),
               ),
-            ],
-            onChanged: onLanguageChanged,
-            isExpanded: true,
+              items: [
+                if (allowNull)
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Tất cả'),
+                  ),
+                ...availableLanguages.map(
+                  (language) => DropdownMenuItem<String?>(
+                    value: language,
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getLanguageIcon(language),
+                          size: 16,
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _getLanguageDisplayName(language),
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              Text(
+                                _getLanguageNativeName(language),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: onLanguageChanged,
+              isExpanded: true,
+              // Sửa lỗi overflow bằng cách giới hạn chiều cao menu
+              menuMaxHeight: 250,
+              // Thêm scrollbar để dễ dàng cuộn
+              dropdownColor: colorScheme.surface,
+              // Sử dụng Material 3 design
+              borderRadius: BorderRadius.circular(8),
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
           ),
         ],
       ),
@@ -406,7 +419,7 @@ class CompactVoiceLanguageSelector extends StatelessWidget {
       'Korean': 'Tiếng Hàn',
       'Chinese': 'Tiếng Trung',
     };
-    
+
     return languageMap[language] ?? language;
   }
 
@@ -424,7 +437,7 @@ class CompactVoiceLanguageSelector extends StatelessWidget {
       'Korean': '한국어',
       'Chinese': '中文',
     };
-    
+
     return nativeNameMap[language] ?? language;
   }
 
@@ -451,14 +464,9 @@ class PopularLanguagesSelector extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final popularLanguages = customLanguages ?? [
-      'English',
-      'Vietnamese',
-      'Spanish',
-      'French',
-      'German',
-      'Japanese',
-    ];
+    final popularLanguages =
+        customLanguages ??
+        ['English', 'Vietnamese', 'Spanish', 'French', 'German', 'Japanese'];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -480,14 +488,16 @@ class PopularLanguagesSelector extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: popularLanguages.map(
-              (language) => _PopularLanguageChip(
-                language: language,
-                isSelected: selectedLanguage == language,
-                onTap: () => onLanguageSelected(language),
-                theme: theme,
-              ),
-            ).toList(),
+            children: popularLanguages
+                .map(
+                  (language) => _PopularLanguageChip(
+                    language: language,
+                    isSelected: selectedLanguage == language,
+                    onTap: () => onLanguageSelected(language),
+                    theme: theme,
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -516,10 +526,7 @@ class _PopularLanguageChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 6,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? colorScheme.primary.withValues(alpha: 0.1)
@@ -567,7 +574,7 @@ class _PopularLanguageChip extends StatelessWidget {
       'German': 'Đức',
       'Japanese': 'Nhật',
     };
-    
+
     return languageMap[language] ?? language;
   }
 }
@@ -588,7 +595,10 @@ class VoiceLanguageStats extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final totalVoices = languageCounts.values.fold(0, (sum, count) => sum + count);
+    final totalVoices = languageCounts.values.fold(
+      0,
+      (sum, count) => sum + count,
+    );
 
     if (totalVoices == 0) {
       return const SizedBox.shrink();
@@ -617,15 +627,18 @@ class VoiceLanguageStats extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: sortedLanguages.take(6).map(
-              (entry) => _LanguageStatChip(
-                language: entry.key,
-                count: entry.value,
-                total: totalVoices,
-                isHighlighted: selectedLanguage == entry.key,
-                theme: theme,
-              ),
-            ).toList(),
+            children: sortedLanguages
+                .take(6)
+                .map(
+                  (entry) => _LanguageStatChip(
+                    language: entry.key,
+                    count: entry.value,
+                    total: totalVoices,
+                    isHighlighted: selectedLanguage == entry.key,
+                    theme: theme,
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -667,11 +680,7 @@ class _LanguageStatChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.language,
-            size: 14,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.language, size: 14, color: colorScheme.primary),
           const SizedBox(width: 4),
           Text(
             '${_getShortLanguageName(language)} $count ($percentage%)',
@@ -696,7 +705,7 @@ class _LanguageStatChip extends StatelessWidget {
       'Korean': 'KO',
       'Chinese': 'ZH',
     };
-    
+
     return shortNames[language] ?? language.substring(0, 2).toUpperCase();
   }
 }

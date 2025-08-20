@@ -25,7 +25,6 @@ class AvatarConfigurationScreen extends StatefulWidget {
   @override
   State<AvatarConfigurationScreen> createState() =>
       _AvatarConfigurationScreenState();
-
 }
 
 class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
@@ -55,6 +54,24 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
       _loadExistingConfiguration();
     }
 
+    // Thêm listener để cập nhật trạng thái nút "Tiếp tục" khi nhập liệu
+    _nameController.addListener(() {
+      if (mounted) {
+        setState(() {
+          // Trigger rebuild để cập nhật trạng thái nút
+        });
+      }
+    });
+
+    // Thêm listener cho description controller (tùy chọn)
+    _descriptionController.addListener(() {
+      if (mounted) {
+        setState(() {
+          // Trigger rebuild để cập nhật UI
+        });
+      }
+    });
+
     _animationController.forward();
   }
 
@@ -76,12 +93,32 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
 
   void _loadExistingConfiguration() {
     final config = widget.existingConfiguration!;
+    print('DEBUG: _loadExistingConfiguration called');
+    print('DEBUG: Config name: ${config.name}');
+    print('DEBUG: Config personalityType: ${config.personalityType}');
+    print(
+      'DEBUG: Config personalityType.runtimeType: ${config.personalityType.runtimeType}',
+    );
+
     _nameController.text = config.name;
     _isActive = config.isActive;
 
     // Find the personality by type
     _selectedPersonality = Personality.getByType(config.personalityType);
+    print(
+      'DEBUG: After Personality.getByType - _selectedPersonality: ${_selectedPersonality?.type.name ?? 'null'}',
+    );
+    print(
+      'DEBUG: _selectedPersonality type: ${_selectedPersonality?.type.runtimeType}',
+    );
     _selectedVoice = config.voiceConfiguration;
+
+    print('DEBUG: _loadExistingConfiguration completed');
+    print(
+      'DEBUG: Final _selectedPersonality: ${_selectedPersonality?.type.name ?? 'null'}',
+    );
+    print('DEBUG: Final _selectedVoice: ${_selectedVoice?.name ?? 'null'}');
+    print('DEBUG: Final _isActive: $_isActive');
   }
 
   @override
@@ -118,6 +155,11 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
   }
 
   void _openPersonalitySelection() async {
+    print('DEBUG: _openPersonalitySelection called');
+    print(
+      'DEBUG: Current _selectedPersonality: ${_selectedPersonality?.type.name ?? 'null'}',
+    );
+
     final result = await Navigator.of(context).push<Personality>(
       MaterialPageRoute(
         builder: (context) => PersonalitySelectionScreen(
@@ -126,15 +168,39 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
       ),
     );
 
+    print(
+      'DEBUG: Returned from PersonalitySelectionScreen: ${result?.type.name ?? 'null'}',
+    );
+
     if (result != null) {
+      print('DEBUG: Setting new personality: ${result.type.name}');
       setState(() {
         _selectedPersonality = result;
       });
+      print(
+        'DEBUG: After setState - _selectedPersonality: ${_selectedPersonality?.type.name ?? 'null'}',
+      );
       HapticFeedback.lightImpact();
+
+      // Show feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã chọn tính cách: ${result.displayName}'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      print('DEBUG: No personality selected, result is null');
     }
   }
 
   void _openVoiceSelection() async {
+    print('DEBUG: _openVoiceSelection called');
+    print('DEBUG: Current _selectedVoice: ${_selectedVoice?.name ?? 'null'}');
+
     try {
       // Use MaterialPageRoute for proper navigation
       await Navigator.of(context).push(
@@ -142,11 +208,15 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
           builder: (context) => VoiceSelectionScreen(
             initialVoice: _selectedVoice,
             onVoiceSelected: (voice) {
+              print('DEBUG: Voice selected callback: ${voice?.name ?? 'null'}');
               // Update the state when voice is selected
-              if (mounted) {
+              if (mounted && voice != null) {
                 setState(() {
                   _selectedVoice = voice;
                 });
+                print(
+                  'DEBUG: After setState - _selectedVoice: ${_selectedVoice?.name ?? 'null'}',
+                );
                 HapticFeedback.lightImpact();
               }
             },
@@ -172,7 +242,11 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text('Lỗi chọn giọng nói: Nhấn "Chi tiết" để xem và sao chép')),
+                Expanded(
+                  child: Text(
+                    'Lỗi chọn giọng nói: Nhấn "Chi tiết" để xem và sao chép',
+                  ),
+                ),
                 TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -183,7 +257,10 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
                       icon: Icons.mic_off,
                     );
                   },
-                  child: const Text('Chi tiết', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Chi tiết',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -323,7 +400,9 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
 
       // Validate editing scenario
       if (widget.isEditing && widget.existingConfiguration == null) {
-        throw Exception('Cannot edit configuration: existingConfiguration is null');
+        throw Exception(
+          'Cannot edit configuration: existingConfiguration is null',
+        );
       }
 
       // Generate ID based on editing state
@@ -335,6 +414,20 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
         // When creating new, generate timestamp-based ID
         configurationId = DateTime.now().millisecondsSinceEpoch.toString();
       }
+
+      // DEBUG: Log the selected personality and voice before saving
+      print('DEBUG: Selected personality: ${_selectedPersonality?.type}');
+      print(
+        'DEBUG: Selected personality type: ${_selectedPersonality?.type.runtimeType}',
+      );
+      print(
+        'DEBUG: Selected personality name: ${_selectedPersonality?.type.name}',
+      );
+      print(
+        'DEBUG: Selected voice: ${voiceConfiguration.voiceId} - ${voiceConfiguration.name}',
+      );
+      print('DEBUG: Voice language: ${voiceConfiguration.language}');
+      print('DEBUG: Voice accent: ${voiceConfiguration.accent}');
 
       final configuration = AvatarConfiguration(
         id: configurationId,
@@ -348,15 +441,48 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
         lastModified: DateTime.now(),
       );
 
+      // DEBUG: Log the final configuration
+      print(
+        'DEBUG: Final configuration - Personality: ${configuration.personalityType}',
+      );
+      print(
+        'DEBUG: Final configuration - Personality type: ${configuration.personalityType.runtimeType}',
+      );
+      print(
+        'DEBUG: Final configuration - Personality name: ${configuration.personalityType.name}',
+      );
+      print(
+        'DEBUG: Final configuration - Voice: ${configuration.voiceConfiguration.name}',
+      );
+
       bool success;
       try {
+        print('DEBUG: About to save configuration to AvatarProvider');
+        print(
+          'DEBUG: Configuration to save - isActive: ${configuration.isActive}',
+        );
+        print(
+          'DEBUG: Configuration to save - personalityType: ${configuration.personalityType}',
+        );
+        print(
+          'DEBUG: Configuration to save - voice: ${configuration.voiceConfiguration.name}',
+        );
+
         if (widget.isEditing) {
+          print('DEBUG: Updating existing configuration');
           success = await avatarProvider.updateConfiguration(configuration);
         } else {
+          print('DEBUG: Creating new configuration');
           success = await avatarProvider.createConfiguration(configuration);
         }
+
+        print('DEBUG: Save operation result: $success');
       } catch (e) {
-        _showSnackBar('Lỗi khi lưu cấu hình: Nhấn "Chi tiết" để xem và sao chép', isError: true);
+        print('ERROR: Exception during save operation: $e');
+        _showSnackBar(
+          'Lỗi khi lưu cấu hình: Nhấn "Chi tiết" để xem và sao chép',
+          isError: true,
+        );
         // Show detailed error dialog
         if (mounted) {
           CopyableErrorDialog.show(
@@ -387,7 +513,10 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
         );
       }
     } catch (e) {
-      _showSnackBar('Đã xảy ra lỗi: Nhấn "Chi tiết" để xem và sao chép', isError: true);
+      _showSnackBar(
+        'Đã xảy ra lỗi: Nhấn "Chi tiết" để xem và sao chép',
+        isError: true,
+      );
       // Show detailed error dialog
       if (mounted) {
         CopyableErrorDialog.show(
@@ -406,7 +535,12 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
     }
   }
 
-  void _showSnackBar(String message, {required bool isError, String? errorTitle, IconData? errorIcon}) {
+  void _showSnackBar(
+    String message, {
+    required bool isError,
+    String? errorTitle,
+    IconData? errorIcon,
+  }) {
     if (isError && message.contains('Nhấn "Chi tiết"')) {
       // Already has copy functionality
       ScaffoldMessenger.of(context).showSnackBar(
@@ -426,7 +560,9 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
             children: [
               const Icon(Icons.error, color: Colors.white),
               const SizedBox(width: 8),
-              Expanded(child: Text('$message: Nhấn "Chi tiết" để xem và sao chép')),
+              Expanded(
+                child: Text('$message: Nhấn "Chi tiết" để xem và sao chép'),
+              ),
               TextButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -437,7 +573,10 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
                     icon: errorIcon ?? Icons.error,
                   );
                 },
-                child: const Text('Chi tiết', style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  'Chi tiết',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -560,6 +699,7 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
             ),
 
             // Navigation buttons
+            // Nút "Tiếp tục" được enable/disable dựa trên _canProceedToNextStep()
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -611,13 +751,32 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
     );
   }
 
+  /// Kiểm tra xem có thể chuyển sang bước tiếp theo hay không
+  /// Bước 0: Chỉ cần tên cấu hình (>= 2 ký tự)
+  /// Bước 1: Cần chọn tính cách
+  /// Bước 2: Luôn có thể tiếp tục (giọng nói là tùy chọn)
   bool _canProceedToNextStep() {
     switch (_currentStep) {
       case 0:
-        return _nameController.text.trim().isNotEmpty;
+        // Chỉ cần tên cấu hình để tiếp tục, mô tả và trạng thái active là tùy chọn
+        final canProceed =
+            _nameController.text.trim().isNotEmpty &&
+            _nameController.text.trim().length >= 2;
+        // Debug: Log validation state
+        print(
+          'DEBUG: Step 0 validation - Name: "${_nameController.text.trim()}", Length: ${_nameController.text.trim().length}, Can proceed: $canProceed',
+        );
+        return canProceed;
       case 1:
-        return _selectedPersonality != null;
+        final canProceed = _selectedPersonality != null;
+        print(
+          'DEBUG: Step 0 validation - Personality selected: ${_selectedPersonality != null}, Can proceed: $canProceed',
+        );
+        return canProceed;
       case 2:
+        print(
+          'DEBUG: Step 2 validation - Voice step is optional, Can proceed: true',
+        );
         return true; // Voice step is optional
       default:
         return true;
@@ -650,10 +809,18 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
             // Name field
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Tên cấu hình *',
                 hintText: 'VD: Avatar Chính, Bot Hỗ Trợ...',
-                prefixIcon: Icon(Icons.person),
+                prefixIcon: const Icon(Icons.person),
+                suffixIcon:
+                    _nameController.text.trim().isNotEmpty &&
+                        _nameController.text.trim().length >= 2
+                    ? Icon(
+                        Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -669,7 +836,62 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
 
             const SizedBox(height: 24),
 
-            // Description field (optional)
+            // Thông báo về điều kiện để tiếp tục
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _canProceedToNextStep()
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.2)
+                    : Theme.of(context).colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _canProceedToNextStep()
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.5)
+                      : Theme.of(
+                          context,
+                        ).colorScheme.outline.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _canProceedToNextStep()
+                        ? Icons.check_circle
+                        : Icons.info_outline,
+                    size: 16,
+                    color: _canProceedToNextStep()
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _canProceedToNextStep()
+                          ? '✓ Sẵn sàng tiếp tục!'
+                          : 'Nút "Tiếp tục" sẽ được kích hoạt khi bạn nhập tên cấu hình (ít nhất 2 ký tự)',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _canProceedToNextStep()
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: _canProceedToNextStep()
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Description field (tùy chọn - không ảnh hưởng đến việc enable nút "Tiếp tục")
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
@@ -683,7 +905,7 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
 
             const SizedBox(height: 24),
 
-            // Active toggle
+            // Active toggle (không ảnh hưởng đến việc enable nút "Tiếp tục")
             SwitchListTile(
               title: const Text('Đặt làm cấu hình hoạt động'),
               subtitle: const Text('Cấu hình này sẽ được sử dụng mặc định'),
@@ -722,12 +944,71 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
           ),
           const SizedBox(height: 24),
 
+          // Debug info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.bug_report,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Debug Info',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Selected Personality: ${_selectedPersonality?.type.name ?? 'null'}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  'Personality Type: ${_selectedPersonality?.type.runtimeType}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           // Selected personality preview
           if (_selectedPersonality != null) ...[
-            PersonalityCard(
-              personality: _selectedPersonality!,
-              isSelected: true,
-              showDescription: true,
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: PersonalityCard(
+                personality: _selectedPersonality!,
+                isSelected: true,
+                showDescription: true,
+              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -735,13 +1016,33 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
           // Browse button
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: ElevatedButton.icon(
               onPressed: _openPersonalitySelection,
-              icon: const Icon(Icons.search),
+              icon: Icon(
+                _selectedPersonality == null ? Icons.add : Icons.edit,
+                color: _selectedPersonality == null
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSecondary,
+              ),
               label: Text(
                 _selectedPersonality == null
                     ? 'Chọn tính cách'
                     : 'Thay đổi tính cách',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: _selectedPersonality == null
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSecondary,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedPersonality == null
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.secondary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -749,23 +1050,94 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
           if (_selectedPersonality == null) ...[
             const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Theme.of(context).colorScheme.onErrorContainer,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).colorScheme.errorContainer,
+                    Theme.of(
+                      context,
+                    ).colorScheme.errorContainer.withOpacity(0.8),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Vui lòng chọn một tính cách để tiếp tục',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.error.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.warning_rounded,
+                          color: Theme.of(context).colorScheme.error,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chưa chọn tính cách',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Vui lòng chọn một tính cách để tiếp tục',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onErrorContainer
+                                        .withOpacity(0.8),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openPersonalitySelection,
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Chọn tính cách ngay'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
@@ -802,83 +1174,156 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
           ),
           const SizedBox(height: 24),
 
-          // Selected voice preview
-          if (_selectedVoice != null) ...[
-            Card(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+          // Debug info for voice
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: colorScheme.primary,
-                          child: Icon(
-                            _selectedVoice!.gender == Gender.male
-                                ? Icons.male
-                                : _selectedVoice!.gender == Gender.female
-                                ? Icons.female
-                                : Icons.person,
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedVoice!.name,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${_selectedVoice!.language} - ${_selectedVoice!.accent}',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.check_circle, color: colorScheme.primary),
-                      ],
+                    Icon(
+                      Icons.bug_report,
+                      size: 16,
+                      color: colorScheme.secondary,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Voice parameters preview
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildParameterChip(
-                            'Ổn định',
-                            '${(_selectedVoice!.settings.stability * 100).round()}%',
-                            Icons.balance,
-                            theme,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildParameterChip(
-                            'Giống',
-                            '${(_selectedVoice!.settings.similarityBoost * 100).round()}%',
-                            Icons.tune,
-                            theme,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildParameterChip(
-                            'Phong cách',
-                            '${(_selectedVoice!.settings.style * 100).round()}%',
-                            Icons.style,
-                            theme,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'Debug Info - Voice',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.secondary,
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Selected Voice: ${_selectedVoice?.name ?? 'null'}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'Voice ID: ${_selectedVoice?.voiceId ?? 'null'}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Selected voice preview
+          if (_selectedVoice != null) ...[
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.secondary.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Card(
+                color: colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              _selectedVoice!.gender == Gender.male
+                                  ? Icons.male
+                                  : _selectedVoice!.gender == Gender.female
+                                  ? Icons.female
+                                  : Icons.person,
+                              color: colorScheme.onSecondary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _selectedVoice!.name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_selectedVoice!.language} - ${_selectedVoice!.accent}',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: colorScheme.onSecondary,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Voice parameters preview
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildParameterChip(
+                              'Ổn định',
+                              '${(_selectedVoice!.settings.stability * 100).round()}%',
+                              Icons.balance,
+                              theme,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildParameterChip(
+                              'Giống',
+                              '${(_selectedVoice!.settings.similarityBoost * 100).round()}%',
+                              Icons.tune,
+                              theme,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildParameterChip(
+                              'Phong cách',
+                              '${(_selectedVoice!.settings.style * 100).round()}%',
+                              Icons.style,
+                              theme,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -890,11 +1335,22 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _openVoiceSelection,
-              icon: Icon(_selectedVoice == null ? Icons.mic : Icons.edit),
+              icon: Icon(
+                _selectedVoice == null ? Icons.mic : Icons.edit,
+                color: _selectedVoice == null
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSecondary,
+              ),
               label: Text(
                 _selectedVoice == null
                     ? 'Chọn giọng nói'
                     : 'Thay đổi giọng nói',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: _selectedVoice == null
+                      ? colorScheme.onPrimary
+                      : colorScheme.onSecondary,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _selectedVoice == null
@@ -904,6 +1360,9 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
                     ? colorScheme.onPrimary
                     : colorScheme.onSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -912,34 +1371,78 @@ class _AvatarConfigurationScreenState extends State<AvatarConfigurationScreen>
 
           // Use default voice option
           if (_selectedVoice == null)
-            Card(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.mic,
-                      size: 32,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Sử dụng giọng mặc định',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Bạn có thể tiếp tục mà không chọn giọng nói. Hệ thống sẽ sử dụng giọng mặc định.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.surfaceContainerHighest,
+                    colorScheme.surfaceContainerHighest.withOpacity(0.8),
                   ],
                 ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: colorScheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.mic,
+                      size: 32,
+                      color: colorScheme.secondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sử dụng giọng mặc định',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bạn có thể tiếp tục mà không chọn giọng nói. Hệ thống sẽ sử dụng giọng mặc định.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _openVoiceSelection,
+                      icon: const Icon(Icons.mic_external_on),
+                      label: const Text('Chọn giọng nói ngay'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.secondary,
+                        foregroundColor: colorScheme.onSecondary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 

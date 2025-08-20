@@ -24,7 +24,9 @@ class PersonalityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final personalityColor = AppColors.getPersonalityColor(personality.type.name);
+    final personalityColor = AppColors.getPersonalityColor(
+      personality.type.name,
+    );
     final colorScheme = theme.colorScheme;
 
     return SizedBox(
@@ -32,14 +34,13 @@ class PersonalityCard extends StatelessWidget {
       height: height,
       child: Card(
         elevation: isSelected ? 8 : 2,
-        shadowColor: isSelected ? personalityColor.withValues(alpha: 0.3) : null,
+        shadowColor: isSelected
+            ? personalityColor.withValues(alpha: 0.3)
+            : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: isSelected
-              ? BorderSide(
-                  color: personalityColor,
-                  width: 2,
-                )
+              ? BorderSide(color: personalityColor, width: 2)
               : BorderSide.none,
         ),
         child: InkWell(
@@ -73,10 +74,7 @@ class PersonalityCard extends StatelessWidget {
                       color: personalityColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(
-                              color: personalityColor,
-                              width: 2,
-                            )
+                          ? Border.all(color: personalityColor, width: 2)
                           : null,
                     ),
                     child: Icon(
@@ -85,24 +83,26 @@ class PersonalityCard extends StatelessWidget {
                       color: personalityColor,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Personality Name
                   Text(
                     personality.displayName,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? personalityColor : colorScheme.onSurface,
+                      color: isSelected
+                          ? personalityColor
+                          : colorScheme.onSurface,
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  
+
                   if (showDescription) ...[
                     const SizedBox(height: 8),
-                    
+
                     // Personality Description
                     Text(
                       personality.description,
@@ -115,7 +115,7 @@ class PersonalityCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  
+
                   // Selected indicator
                   if (isSelected) ...[
                     const SizedBox(height: 12),
@@ -201,13 +201,145 @@ class CompactPersonalityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PersonalityCard(
-      personality: personality,
-      isSelected: isSelected,
-      onTap: onTap,
-      showDescription: false,
-      height: 120,
+    final theme = Theme.of(context);
+    final personalityColor = AppColors.getPersonalityColor(
+      personality.type.name,
     );
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: isSelected ? 6 : 2,
+      margin: const EdgeInsets.all(4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isSelected
+            ? BorderSide(color: personalityColor, width: 2.5)
+            : BorderSide(color: colorScheme.outline.withOpacity(0.2), width: 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      personalityColor.withOpacity(0.1),
+                      personalityColor.withOpacity(0.05),
+                    ],
+                  )
+                : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon container
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: personalityColor.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    border: isSelected
+                        ? Border.all(color: personalityColor, width: 2.5)
+                        : null,
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: personalityColor.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    _getPersonalityIcon(personality.type),
+                    size: 28,
+                    color: personalityColor,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Title
+                Text(
+                  personality.displayName,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? personalityColor
+                        : colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 6),
+
+                // Description (compact)
+                Text(
+                  personality.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Selection indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected
+                        ? personalityColor
+                        : colorScheme.outline.withOpacity(0.3),
+                  ),
+                  child: isSelected
+                      ? Icon(Icons.check, size: 14, color: Colors.white)
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getPersonalityIcon(PersonalityType type) {
+    switch (type) {
+      case PersonalityType.happy:
+        return Icons.sentiment_very_satisfied;
+      case PersonalityType.romantic:
+        return Icons.favorite;
+      case PersonalityType.funny:
+        return Icons.emoji_emotions;
+      case PersonalityType.professional:
+        return Icons.business_center;
+      case PersonalityType.casual:
+        return Icons.sentiment_satisfied;
+      case PersonalityType.energetic:
+        return Icons.bolt;
+      case PersonalityType.calm:
+        return Icons.spa;
+      case PersonalityType.mysterious:
+        return Icons.psychology;
+    }
   }
 }
 
@@ -229,7 +361,9 @@ class PersonalityListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final personalityColor = AppColors.getPersonalityColor(personality.type.name);
+    final personalityColor = AppColors.getPersonalityColor(
+      personality.type.name,
+    );
     final colorScheme = theme.colorScheme;
 
     return Card(
@@ -238,10 +372,7 @@ class PersonalityListItem extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isSelected
-            ? BorderSide(
-                color: personalityColor,
-                width: 2,
-              )
+            ? BorderSide(color: personalityColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -251,9 +382,7 @@ class PersonalityListItem extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: isSelected
-                ? personalityColor.withValues(alpha: 0.08)
-                : null,
+            color: isSelected ? personalityColor.withValues(alpha: 0.08) : null,
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(
@@ -267,10 +396,7 @@ class PersonalityListItem extends StatelessWidget {
                 color: personalityColor.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
                 border: isSelected
-                    ? Border.all(
-                        color: personalityColor,
-                        width: 2,
-                      )
+                    ? Border.all(color: personalityColor, width: 2)
                     : null,
               ),
               child: Icon(
@@ -286,20 +412,41 @@ class PersonalityListItem extends StatelessWidget {
                 color: isSelected ? personalityColor : colorScheme.onSurface,
               ),
             ),
-            subtitle: Text(
-              personality.description,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  personality.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: personalityColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _getPersonalityTypeLabel(personality.type),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: personalityColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            trailing: trailing ??
+            trailing:
+                trailing ??
                 (isSelected
-                    ? Icon(
-                        Icons.check_circle,
-                        color: personalityColor,
-                      )
+                    ? Icon(Icons.check_circle, color: personalityColor)
                     : Icon(
                         Icons.radio_button_unchecked,
                         color: colorScheme.outline,
@@ -328,6 +475,27 @@ class PersonalityListItem extends StatelessWidget {
         return Icons.spa;
       case PersonalityType.mysterious:
         return Icons.psychology;
+    }
+  }
+
+  String _getPersonalityTypeLabel(PersonalityType type) {
+    switch (type) {
+      case PersonalityType.happy:
+        return 'Vui vẻ';
+      case PersonalityType.romantic:
+        return 'Lãng mạn';
+      case PersonalityType.funny:
+        return 'Hài hước';
+      case PersonalityType.professional:
+        return 'Chuyên nghiệp';
+      case PersonalityType.casual:
+        return 'Thân thiện';
+      case PersonalityType.energetic:
+        return 'Năng động';
+      case PersonalityType.calm:
+        return 'Bình tĩnh';
+      case PersonalityType.mysterious:
+        return 'Bí ẩn';
     }
   }
 }
