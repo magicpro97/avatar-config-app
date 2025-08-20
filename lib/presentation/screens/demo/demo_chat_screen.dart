@@ -247,12 +247,15 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     await Future.delayed(const Duration(milliseconds: 1000));
 
     try {
-      // Generate response using API with fallback to hard-coded responses
-      final response = await _personalityService.generateResponse(
-        userMessage: userMessage,
-        personalityType: activeConfig.personalityType,
-        voiceId: activeConfig.voiceConfiguration.voiceId,
-      );
+      // Build structured messages for OpenAI to reduce repetition
+      final messages = _buildMessagesForOpenAI(limit: 12);
+      final response = await _personalityService
+          .generateOpenAiResponseWithMessages(
+            messages: messages,
+            temperature: 0.6,
+            presencePenalty: 0.1,
+            frequencyPenalty: 0.7,
+          );
 
       _addToConversation(
         message: response,
@@ -273,6 +276,40 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
         voiceConfig: activeConfig.voiceConfiguration,
       );
     }
+  }
+
+  String _buildConversationHistoryForAI({int limit = 10}) {
+    if (_conversationHistory.isEmpty) return '';
+    final startIndex = _conversationHistory.length > limit
+        ? _conversationHistory.length - limit
+        : 0;
+    final buffer = StringBuffer();
+    for (int i = startIndex; i < _conversationHistory.length; i++) {
+      final entry = _conversationHistory[i];
+      final isUser = (entry['isUserMessage'] as bool?) ?? false;
+      final role = isUser ? 'User' : 'Assistant';
+      final content = (entry['message'] as String?)?.trim() ?? '';
+      if (content.isEmpty) continue;
+      buffer.writeln('$role: $content');
+    }
+    return buffer.toString().trim();
+  }
+
+  List<Map<String, String>> _buildMessagesForOpenAI({int limit = 12}) {
+    final messages = <Map<String, String>>[];
+    final startIndex = _conversationHistory.length > limit
+        ? _conversationHistory.length - limit
+        : 0;
+
+    for (int i = startIndex; i < _conversationHistory.length; i++) {
+      final entry = _conversationHistory[i];
+      final isUser = (entry['isUserMessage'] as bool?) ?? false;
+      final content = (entry['message'] as String?)?.trim();
+      if (content == null || content.isEmpty) continue;
+      messages.add({'role': isUser ? 'user' : 'assistant', 'content': content});
+    }
+    // Không tự động thêm user message cuối vì history đã có rồi
+    return messages;
   }
 
   /// Fallback method for generating personality responses when API is unavailable

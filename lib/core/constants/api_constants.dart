@@ -19,7 +19,7 @@ class ApiConstants {
   static const String elevenLabsAuthHeader = 'xi-api-key';
   static const String openAiAuthHeader = 'Authorization';
 
-  // Default models
-  static const String defaultChatModel = 'gpt-3.5-turbo';
+  // Default models (update to current OpenAI Chat Completions models)
+  static const String defaultChatModel = 'gpt-4o-mini';
   static const String fallbackChatModel = 'gpt-4o-mini';
 }
