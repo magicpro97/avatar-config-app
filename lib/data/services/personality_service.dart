@@ -1,4 +1,7 @@
 // Enhanced service for generating personality-based responses via OpenAI API
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../../core/network/api_client.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/errors/exceptions.dart';
@@ -61,10 +64,7 @@ class PersonalityService {
       };
 
       // Make API call to OpenAI Chat Completions
-      final response = await _openAiClient.post(
-        ApiConstants.chatCompletionsEndpoint,
-        body: requestBody,
-      );
+      final response = await _postOpenAiChatCompletions(requestBody);
 
       // Extract the response from OpenAI API
       if (response.containsKey('choices') &&
@@ -137,10 +137,7 @@ class PersonalityService {
         'frequency_penalty': 0.1,
       };
 
-      final response = await _openAiClient.post(
-        ApiConstants.chatCompletionsEndpoint,
-        body: requestBody,
-      );
+      final response = await _postOpenAiChatCompletions(requestBody);
 
       if (response.containsKey('choices') &&
           response['choices'] is List &&
@@ -174,16 +171,16 @@ class PersonalityService {
   Future<String> generateOpenAiResponseWithMessages({
     required List<Map<String, String>> messages,
     String? model,
-    double temperature = 0.7,
-    double presencePenalty = 0.2,
-    double frequencyPenalty = 0.5,
+    double temperature = 0.6,
+    double presencePenalty = 0.3,
+    double frequencyPenalty = 1.0,
   }) async {
     try {
       // Ensure minimal system instruction in front
       final finalMessages = <Map<String, String>>[
         {
           'role': 'system',
-          'content': 'Bạn là ChatGPT. Trả lời ngắn gọn (1-3 câu), bằng tiếng Việt, bám sát nội dung người dùng và tránh lặp lại.',
+          'content': 'Bạn là ChatGPT. Trả lời ngắn gọn (1-3 câu), bằng tiếng Việt, bám sát nội dung người dùng. Không lặp lại hoặc diễn đạt lại y nguyên câu hỏi của người dùng; không mở đầu câu trả lời bằng việc nhắc lại lời người dùng. Tránh trùng lặp ý và từ ngữ.',
         },
         ...messages,
       ];
@@ -195,12 +192,10 @@ class PersonalityService {
         'temperature': temperature,
         'presence_penalty': presencePenalty,
         'frequency_penalty': frequencyPenalty,
+        'stop': ['User:', 'Assistant:'],
       };
 
-      final response = await _openAiClient.post(
-        ApiConstants.chatCompletionsEndpoint,
-        body: requestBody,
-      );
+      final response = await _postOpenAiChatCompletions(requestBody);
 
       if (response.containsKey('choices') &&
           response['choices'] is List &&
@@ -227,6 +222,58 @@ class PersonalityService {
     } catch (e) {
       return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
     }
+  }
+
+  Future<Map<String, dynamic>> _postOpenAiChatCompletions(
+      Map<String, dynamic> body) async {
+    if (!kIsWeb) {
+      return _openAiClient.post(
+        ApiConstants.chatCompletionsEndpoint,
+        body: body,
+      );
+    }
+
+    // Web: handle CORS by trying direct and proxy fallbacks
+    final String endpoint = '${ApiConstants.openAiBaseUrl}${ApiConstants.chatCompletionsEndpoint}';
+    final headers = <String, String>{
+      'Content-Type': ApiConstants.contentType,
+      'Authorization': 'Bearer ${_openAiClient.apiKey ?? ''}',
+      'User-Agent': 'Avatar-Config-App/1.0.0',
+    };
+
+    // Try direct
+    try {
+      final res = await http
+          .post(Uri.parse(endpoint), headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(milliseconds: ApiConstants.receiveTimeout));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+
+    // Try proxy 1: isomorphic-git CORS proxy
+    try {
+      final proxyUrl = 'https://cors.isomorphic-git.org/$endpoint';
+      final res = await http
+          .post(Uri.parse(proxyUrl), headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(milliseconds: ApiConstants.receiveTimeout));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+
+    // Try proxy 2: cors-anywhere (may require temporary activation)
+    try {
+      final proxyUrl = 'https://cors-anywhere.herokuapp.com/$endpoint';
+      final res = await http
+          .post(Uri.parse(proxyUrl), headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(milliseconds: ApiConstants.receiveTimeout));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+
+    throw const ServerException(message: 'OpenAI request failed on web (CORS)');
   }
 
   /// Try using the fallback model (gpt-4o-mini) if the main model fails

@@ -206,7 +206,7 @@ class _DemoChatScreenState extends State<DemoChatScreen> {
     });
   }
 
-  late final PersonalityService _personalityService;
+  late PersonalityService _personalityService;
 
   @override
   void initState() {
