@@ -32,7 +32,7 @@ class AvatarConfigApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final ElevenLabsService elevenLabsService = ElevenLabsService(
       httpClient: http.Client(),
-      secureStorage: SecureStorage(),
+      secureStorage: SecureStorage(), // This will be ignored, ApiConfigService is used instead
     );
     return MultiProvider(
       providers: [

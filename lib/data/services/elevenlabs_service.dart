@@ -9,11 +9,11 @@ import '../../core/storage/secure_storage.dart';
 import '../models/elevenlabs_models.dart';
 import '../models/voice_model.dart';
 import 'web_cors_handler.dart';
+import 'api_config_service.dart';
 
 class ElevenLabsService {
   final http.Client _httpClient;
   final SecureStorage _secureStorage;
-  static const String _apiKeyStorageKey = 'elevenlabs_api_key';
 
   // Rate limiting
   DateTime? _lastRequestTime;
@@ -32,7 +32,7 @@ class ElevenLabsService {
   // API Key Management
   Future<String?> getApiKey() async {
     try {
-      return await _secureStorage.read(_apiKeyStorageKey);
+      return await ApiConfigService.getElevenLabsApiKey();
     } catch (e) {
       throw CacheException(message: 'Failed to retrieve API key: $e');
     }
@@ -40,7 +40,7 @@ class ElevenLabsService {
 
   Future<void> setApiKey(String apiKey) async {
     try {
-      await _secureStorage.write(_apiKeyStorageKey, apiKey);
+      await ApiConfigService.setElevenLabsApiKey(apiKey);
     } catch (e) {
       throw CacheException(message: 'Failed to store API key: $e');
     }
@@ -48,7 +48,7 @@ class ElevenLabsService {
 
   Future<void> clearApiKey() async {
     try {
-      await _secureStorage.delete(_apiKeyStorageKey);
+      await ApiConfigService.removeElevenLabsApiKey();
     } catch (e) {
       throw CacheException(message: 'Failed to clear API key: $e');
     }
@@ -69,6 +69,29 @@ class ElevenLabsService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+  
+  // Debug method to check API key status
+  Future<Map<String, dynamic>> debugApiKey() async {
+    try {
+      final apiKey = await getApiKey();
+      final hasKey = apiKey != null && apiKey.isNotEmpty;
+      final keyLength = apiKey?.length ?? 0;
+      final keyPreview = apiKey != null ? '${apiKey.substring(0, 7)}...' : null;
+      
+      return {
+        'has_key': hasKey,
+        'key_length': keyLength,
+        'key_preview': keyPreview,
+        'source': 'ApiConfigService',
+      };
+    } catch (e) {
+      return {
+        'has_key': false,
+        'error': e.toString(),
+        'source': 'ApiConfigService',
+      };
     }
   }
 

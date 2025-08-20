@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/app_settings_model.dart';
 import '../../../data/repositories/settings_repository_impl.dart';
 import '../../widgets/common/copyable_error_widget.dart';
 import '../../../data/services/api_config_service.dart';
+import '../../../data/services/elevenlabs_service.dart';
+import '../../../core/storage/secure_storage.dart';
 
 /// Simple settings screen for testing
 class SimpleSettingsScreen extends StatefulWidget {
@@ -326,6 +329,11 @@ class _SimpleSettingsScreenState extends State<SimpleSettingsScreen> {
                     onTap: () async {
                       try {
                         final debugInfo = await ApiConfigService.debugApiKeys();
+                        final elevenLabsDebug = await ElevenLabsService(
+                          httpClient: http.Client(),
+                          secureStorage: SecureStorage(),
+                        ).debugApiKey();
+                        
                         if (mounted) {
                           showDialog(
                             context: context,
@@ -342,12 +350,20 @@ class _SimpleSettingsScreenState extends State<SimpleSettingsScreen> {
                                     if (debugInfo['openai_key_preview'] != null)
                                       Text('Preview: ${debugInfo['openai_key_preview']}'),
                                     const SizedBox(height: 8),
-                                    Text('ElevenLabs Key: ${debugInfo['elevenlabs_has_key'] ? '✅ Found' : '❌ Missing'}'),
+                                    Text('ElevenLabs Key (ApiConfigService): ${debugInfo['elevenlabs_has_key'] ? '✅ Found' : '❌ Missing'}'),
                                     if (debugInfo['elevenlabs_key_preview'] != null)
                                       Text('Preview: ${debugInfo['elevenlabs_key_preview']}'),
+                                    const SizedBox(height: 8),
+                                    Text('ElevenLabs Key (Service): ${elevenLabsDebug['has_key'] ? '✅ Found' : '❌ Missing'}'),
+                                    if (elevenLabsDebug['key_preview'] != null)
+                                      Text('Preview: ${elevenLabsDebug['key_preview']}'),
                                     if (debugInfo['error'] != null) ...[
                                       const SizedBox(height: 8),
                                       Text('Error: ${debugInfo['error']}', style: const TextStyle(color: Colors.red)),
+                                    ],
+                                    if (elevenLabsDebug['error'] != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text('ElevenLabs Error: ${elevenLabsDebug['error']}', style: const TextStyle(color: Colors.red)),
                                     ],
                                   ],
                                 ),
