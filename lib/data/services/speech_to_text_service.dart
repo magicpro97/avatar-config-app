@@ -26,7 +26,7 @@ class SpeechToTextService {
   bool _enableRealTimeResults = true; // Flag to enable/disable real-time updates
   String? _partialText; // For partial recognition results
   // Web fallback mode to avoid platform plugin issues (can be overridden by settings)
-  bool _useWebFallback = kIsWeb;
+  bool _useWebFallback = false; // Disable web fallback by default to enable real speech recognition
   Timer? _fallbackTimer;
   bool _isOperationInProgress = false; // Prevent concurrent start/stop/cancel
   DateTime? _lastStateChangeAt;
@@ -101,16 +101,33 @@ class SpeechToTextService {
       // Proactively release any dangling engine resources (especially after widget toggles)
       await _forceReleaseResources();
 
-      final isAvailable = await _speechToText.initialize(
-        onStatus: _handleStatusChange,
-        // Avoid passing onError on web to prevent Event -> SpeechRecognitionError cast issues
-        onError: kIsWeb
-            ? null
-            : (error) {
-                final message = _extractErrorMessage(error);
-                _handleError(message);
-              },
-      );
+      // Try to initialize with proper error handling
+      bool isAvailable = false;
+      try {
+        isAvailable = await _speechToText.initialize(
+          onStatus: _handleStatusChange,
+          onError: (error) {
+            final message = _extractErrorMessage(error);
+            _handleError(message);
+          },
+        );
+      } catch (initError) {
+        // If initialization fails, try without error callback for web
+        if (kIsWeb) {
+          try {
+            isAvailable = await _speechToText.initialize(
+              onStatus: _handleStatusChange,
+              onError: null,
+            );
+          } catch (webInitError) {
+            _setError('Failed to initialize speech recognition on web: $webInitError');
+            return false;
+          }
+        } else {
+          _setError('Failed to initialize speech recognition: $initError');
+          return false;
+        }
+      }
 
       if (isAvailable) {
         _setState(SpeechRecognitionState.idle);

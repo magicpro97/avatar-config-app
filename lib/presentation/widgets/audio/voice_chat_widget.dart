@@ -90,17 +90,20 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
       _recordingService = VoiceRecordingService();
       _speechService = SpeechToTextService();
 
-      // Apply runtime settings for web speech fallback
-      try {
-        final settingsRepo = SettingsRepositoryImpl();
-        final useFallback = await settingsRepo.getSetting<bool>('useWebSpeechFallback') ?? true;
-        _speechService.setUseWebFallback(useFallback);
-      } catch (_) {}
+      // Disable web fallback to enable real speech recognition
+      _speechService.setUseWebFallback(false);
 
       // Initialize speech recognition
       final speechInitialized = await _speechService.initialize();
       if (!speechInitialized) {
-        _setError('Speech recognition initialization failed');
+        _setError('Speech recognition initialization failed. Please check microphone permissions.');
+        return;
+      }
+
+      // Check microphone permission for speech recognition
+      final hasMicPermission = await _speechService.isMicrophoneAvailable();
+      if (!hasMicPermission) {
+        _setError('Microphone permission is required for speech recognition');
         return;
       }
 
@@ -229,23 +232,72 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
 
   Future<void> _handleCheckMicPermission() async {
     try {
-      final hasPerm = await _speechService.isMicrophoneAvailable();
-      if (!hasPerm) {
-        final granted = await _speechService.requestPermission();
+      // Check speech recognition microphone permission
+      final hasSpeechPerm = await _speechService.isMicrophoneAvailable();
+      
+      // Check recording microphone permission
+      final hasRecordingPerm = await _recordingService.hasRecordingPermission();
+      
+      if (!hasSpeechPerm || !hasRecordingPerm) {
+        // Request permissions
+        bool speechGranted = false;
+        bool recordingGranted = false;
+        
+        if (!hasSpeechPerm) {
+          speechGranted = await _speechService.requestPermission();
+        }
+        
+        if (!hasRecordingPerm) {
+          // For recording, we need to try to start recording to trigger permission request
+          try {
+            await _recordingService.startRecording();
+            await _recordingService.stopRecording();
+            recordingGranted = true;
+          } catch (e) {
+            recordingGranted = false;
+          }
+        }
+        
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(granted ? 'Đã cấp quyền micro' : 'Không thể cấp quyền micro')),
-        );
+        
+        if (speechGranted && recordingGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã cấp quyền micro cho thu âm và nhận dạng giọng nói'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (speechGranted || recordingGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Một số quyền micro chưa được cấp. Vui lòng kiểm tra cài đặt ứng dụng.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không thể cấp quyền micro. Vui lòng vào cài đặt ứng dụng để cấp quyền.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quyền micro đã được cấp')),
+          const SnackBar(
+            content: Text('Quyền micro đã được cấp đầy đủ'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể kiểm tra quyền micro: $e')),
+        SnackBar(
+          content: Text('Không thể kiểm tra quyền micro: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -257,6 +309,67 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
         // Only disable voice button, not send button
         _isButtonDisabled = _isRecording || _isListening; // keep responsive when stopping
       });
+    }
+  }
+
+  // Check services status and provide helpful information
+  Future<void> _checkServicesStatus() async {
+    if (!_isInitialized) {
+      _setError('Voice services are not initialized. Please wait...');
+      return;
+    }
+
+    try {
+      final speechAvailable = await _speechService.isAvailable();
+      final hasSpeechPerm = await _speechService.isMicrophoneAvailable();
+      final hasRecordingPerm = await _recordingService.hasRecordingPermission();
+
+      if (!speechAvailable) {
+        _setError('Speech recognition is not available on this device');
+        return;
+      }
+
+      if (!hasSpeechPerm || !hasRecordingPerm) {
+        _setError('Microphone permissions are required. Tap the permission button to grant access.');
+        return;
+      }
+
+      // All good
+      _clearError();
+    } catch (e) {
+      _setError('Failed to check services status: $e');
+    }
+  }
+
+  // Get services status for display
+  Future<Map<String, bool>> _getServicesStatus() async {
+    if (!_isInitialized) {
+      return {
+        'initialized': false,
+        'speechAvailable': false,
+        'hasSpeechPerm': false,
+        'hasRecordingPerm': false,
+      };
+    }
+
+    try {
+      final speechAvailable = await _speechService.isAvailable();
+      final hasSpeechPerm = await _speechService.isMicrophoneAvailable();
+      final hasRecordingPerm = await _recordingService.hasRecordingPermission();
+
+      return {
+        'initialized': true,
+        'speechAvailable': speechAvailable,
+        'hasSpeechPerm': hasSpeechPerm,
+        'hasRecordingPerm': hasRecordingPerm,
+      };
+    } catch (e) {
+      return {
+        'initialized': true,
+        'speechAvailable': false,
+        'hasSpeechPerm': false,
+        'hasRecordingPerm': false,
+      };
     }
   }
 
@@ -399,6 +512,40 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
           await _handleStartListening();
         } catch (e) {
           _setError('Failed to stop recording: $e');
+        }
+      });
+    });
+  }
+
+  Future<void> _handleStartVoiceInput() async {
+    await _debouncedButtonPress(() async {
+      await _safeStateTransition(() async {
+        try {
+          _clearError();
+
+          // Check services status first
+          await _checkServicesStatus();
+          if (_errorMessage != null) {
+            return; // Error already set by _checkServicesStatus
+          }
+
+          // Start with recording first, then convert to speech recognition
+          final hasRecordingPerm = await _recordingService.hasRecordingPermission();
+          if (!hasRecordingPerm) {
+            _setError('Microphone permission is required for recording. Please tap the permission button.');
+            return;
+          }
+
+          // Start recording
+          final recordingSuccess = await _recordingService.startRecording();
+          if (!recordingSuccess) {
+            _setError('Failed to start recording - ${_recordingService.errorMessage ?? "unknown error"}');
+            return;
+          }
+
+          // Recording started successfully, will be converted to speech recognition when stopped
+        } catch (e) {
+          _setError('Failed to start voice input: $e');
         }
       });
     });
@@ -637,7 +784,7 @@ class _VoiceChatWidgetState extends State<VoiceChatWidget>
                                 ? (_isRecording
                                     ? _handleStopRecording
                                     : _handleStopListening)
-                                : (_isButtonDisabled ? null : _handleStartListening),
+                                : (_isButtonDisabled ? null : _handleStartVoiceInput),
                             child: Container(
                               width: 48,
                               height: 48,

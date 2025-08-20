@@ -61,6 +61,13 @@ class VoiceRecordingService {
         return false;
       }
 
+      // Check recording permission first
+      final hasPermission = await hasRecordingPermission();
+      if (!hasPermission) {
+        _setError('Microphone permission is required for recording');
+        return false;
+      }
+
       // Initialize audio stream for visualization BEFORE starting recording
       _audioStreamController = StreamController<List<int>>.broadcast();
       _audioStream = _audioStreamController!.stream;
